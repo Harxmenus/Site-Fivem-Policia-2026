@@ -5,6 +5,8 @@ import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
+import { kv } from '@vercel/kv';
+import { put } from '@vercel/blob';
 
 // Load environment variables
 dotenv.config();
@@ -36,24 +38,21 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 // Instead of a hardcoded token literal (which anyone reading the source could
 // reuse to authenticate), we read it from the environment or, failing that,
 // generate a random token once and persist it to disk so it survives restarts.
-function loadOrCreateAdminToken(): string {
+async function getAdminToken(): Promise<string> {
   if (process.env.ADMIN_TOKEN_SECRET) {
     return process.env.ADMIN_TOKEN_SECRET;
   }
   try {
-    if (fs.existsSync(TOKEN_FILE)) {
-      const existing = fs.readFileSync(TOKEN_FILE, 'utf8').trim();
-      if (existing) return existing;
-    }
+    const existing = await kv.get('admin_token');
+    if (existing) return existing as string;
     const generated = crypto.randomBytes(32).toString('hex');
-    fs.writeFileSync(TOKEN_FILE, generated, 'utf8');
+    await kv.set('admin_token', generated);
     return generated;
   } catch (err) {
-    console.error('Could not persist admin token, using an in-memory token instead:', err);
     return crypto.randomBytes(32).toString('hex');
   }
 }
-const ADMIN_TOKEN = loadOrCreateAdminToken();
+const ADMIN_TOKEN = 'Vercel_KV_Dynamic_Token_Use_GetAdminToken_Instead';
 
 // ---------------------------------------------------------------------------
 // Password hashing (uses Node's built-in crypto, no extra dependency needed)
@@ -463,21 +462,17 @@ function cloneDefault<T>(value: T): T {
 // ---------------------------------------------------------------------------
 
 // Reads the database file and applies safe, additive migrations.
-function getPortalData(): any {
+async function getPortalData(): Promise<any> {
   try {
-    if (!fs.existsSync(DATA_FILE)) {
-      const fresh = cloneDefault(DEFAULT_PORTAL_DATA);
-      fs.writeFileSync(DATA_FILE, JSON.stringify(fresh, null, 2), 'utf8');
-      return fresh;
+    let data = await kv.get<any>('portal_data');
+    if (!data) {
+      data = cloneDefault(DEFAULT_PORTAL_DATA);
+      await kv.set('portal_data', data);
+      return data;
     }
-    const content = fs.readFileSync(DATA_FILE, 'utf8');
-    const data = JSON.parse(content);
-
+    
+    // Migrations
     let updated = false;
-
-    // Structural migration only — fills in fields that didn't exist in older
-    // versions of the schema. It intentionally does NOT overwrite existing
-    // admin-edited text, so customized content is never silently lost.
     if (!data.history) {
       data.history = cloneDefault(DEFAULT_PORTAL_DATA.history);
       updated = true;
@@ -490,10 +485,8 @@ function getPortalData(): any {
       delete data.history.values;
       updated = true;
     }
-
-    // Older records used "phone" instead of "passport" — normalize once.
     if (Array.isArray(data.submissions)) {
-      data.submissions.forEach((submission: any) => {
+      data.submissions.forEach((submission) => {
         if (!submission.passport && submission.phone) {
           submission.passport = submission.phone;
           delete submission.phone;
@@ -501,17 +494,15 @@ function getPortalData(): any {
         }
       });
     }
-
-    // Ensure every gallery item has a category and map legacy emoji categories to emoji-less ones
     if (Array.isArray(data.gallery)) {
-      const fallbackCategoryById: Record<string, string> = {
+      const fallbackCategoryById = {
         g1: 'Patrulhamento',
         g2: 'Operações',
         g3: 'Certificados',
         g4: 'Abordagens',
         g5: 'Apreensões',
       };
-      data.gallery.forEach((item: any) => {
+      data.gallery.forEach((item) => {
         const oldCat = item.category || fallbackCategoryById[item.id] || 'Patrulhamento';
         let newCat = 'Patrulhamento';
         if (oldCat.includes('Operações') || oldCat.includes('Operação')) {
@@ -534,7 +525,7 @@ function getPortalData(): any {
     }
 
     if (updated) {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+      await kv.set('portal_data', data);
     }
 
     return data;
@@ -544,9 +535,9 @@ function getPortalData(): any {
   }
 }
 
-function savePortalData(data: any): boolean {
+async function savePortalData(data: any): Promise<boolean> {
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+    await kv.set('portal_data', data);
     return true;
   } catch (error) {
     console.error('Error writing portal data:', error);
@@ -558,9 +549,10 @@ function savePortalData(data: any): boolean {
 // Auth
 // ---------------------------------------------------------------------------
 
-const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
-  if (authHeader === `Bearer ${ADMIN_TOKEN}`) {
+  const token = await getAdminToken();
+  if (authHeader === `Bearer ${token}`) {
     next();
   } else {
     res.status(401).json({ error: 'Não autorizado. Faça login novamente.' });
@@ -591,7 +583,7 @@ function resetLoginAttempts(ip: string) {
 
 // Verifies a login attempt against stored credentials, transparently
 // upgrading a legacy plain-text password to a salted hash on first success.
-function verifyAdminCredentials(data: any, username: string, password: string): boolean {
+async function verifyAdminCredentials(data: any, username: string, password: string): Promise<boolean> {
   const creds = data.adminCredentials || DEFAULT_PORTAL_DATA.adminCredentials;
   if (username !== creds.username) return false;
 
@@ -599,11 +591,10 @@ function verifyAdminCredentials(data: any, username: string, password: string): 
     return verifyPassword(password, creds.password);
   }
 
-  // Legacy plain-text credentials: compare directly, then migrate to a hash.
   const matches = password === creds.password;
   if (matches) {
     data.adminCredentials.password = hashPassword(password);
-    savePortalData(data);
+    await await savePortalData(data);
   }
   return matches;
 }
@@ -613,14 +604,14 @@ function verifyAdminCredentials(data: any, username: string, password: string): 
 // ---------------------------------------------------------------------------
 
 // 1. Get Portal Data (excludes credentials for safety)
-app.get('/api/content', (req, res) => {
-  const data = getPortalData();
+app.get('/api/content', async (req, res) => {
+  const data = await getPortalData();
   const { adminCredentials, ...publicData } = data;
   res.json(publicData);
 });
 
 // 2. Admin Login
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const ip = req.ip || 'unknown';
   if (isLoginRateLimited(ip)) {
     return res
@@ -635,8 +626,8 @@ app.post('/api/login', (req, res) => {
     return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
   }
 
-  const data = getPortalData();
-  if (verifyAdminCredentials(data, username, password)) {
+  const data = await getPortalData();
+  if (await verifyAdminCredentials(data, username, password)) {
     resetLoginAttempts(ip);
     res.json({ token: ADMIN_TOKEN, username });
   } else {
@@ -645,9 +636,9 @@ app.post('/api/login', (req, res) => {
 });
 
 // 3. Update Portal Data
-app.post('/api/content', requireAdmin, (req, res) => {
+app.post('/api/content', requireAdmin, async (req, res) => {
   const incomingData = req.body || {};
-  const currentData = getPortalData();
+  const currentData = await getPortalData();
 
   const updatedData = {
     ...currentData,
@@ -682,7 +673,7 @@ app.post('/api/content', requireAdmin, (req, res) => {
     };
   }
 
-  if (savePortalData(updatedData)) {
+  if (await savePortalData(updatedData)) {
     const { adminCredentials, ...publicData } = updatedData;
     res.json({ success: true, data: publicData });
   } else {
@@ -703,7 +694,7 @@ const ALLOWED_IMAGE_EXTENSIONS: Record<string, string> = {
 };
 
 // Image Upload Endpoint (protected)
-app.post('/api/upload', requireAdmin, (req, res) => {
+app.post('/api/upload', requireAdmin, async (req, res) => {
   const { base64 } = req.body || {};
   if (!base64 || typeof base64 !== 'string') {
     return res.status(400).json({ error: 'Dados de upload inválidos.' });
@@ -717,11 +708,9 @@ app.post('/api/upload', requireAdmin, (req, res) => {
   const mimeType = matches[1].toLowerCase();
   const extension = ALLOWED_IMAGE_EXTENSIONS[mimeType];
   if (!extension) {
-    return res
-      .status(400)
-      .json({
-        error: 'Tipo de arquivo não permitido. Envie apenas imagens PNG, JPG, WEBP ou GIF.',
-      });
+    return res.status(400).json({
+      error: 'Tipo de arquivo não permitido. Envie apenas imagens PNG, JPG, WEBP ou GIF.',
+    });
   }
 
   try {
@@ -731,9 +720,11 @@ app.post('/api/upload', requireAdmin, (req, res) => {
     }
 
     const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${extension}`;
-    const filepath = path.join(UPLOADS_DIR, filename);
-    fs.writeFileSync(filepath, buffer);
-    res.json({ success: true, url: `/uploads/${filename}` });
+    
+    // Save to Vercel Blob
+    const blob = await put(filename, buffer, { access: 'public' });
+    
+    res.json({ success: true, url: blob.url });
   } catch (err: any) {
     console.error('Upload error:', err);
     res.status(500).json({ error: 'Erro ao salvar imagem no servidor.' });
@@ -741,12 +732,12 @@ app.post('/api/upload', requireAdmin, (req, res) => {
 });
 
 // 4. Delete a Candidate Submission
-app.delete('/api/submissions/:id', requireAdmin, (req, res) => {
+app.delete('/api/submissions/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const currentData = getPortalData();
+  const currentData = await getPortalData();
   currentData.submissions = (currentData.submissions || []).filter((sub: any) => sub.id !== id);
 
-  if (savePortalData(currentData)) {
+  if (await savePortalData(currentData)) {
     res.json({ success: true, message: 'Inscrição removida com sucesso.' });
   } else {
     res.status(500).json({ error: 'Erro ao deletar inscrição.' });
@@ -781,7 +772,7 @@ app.post('/api/submit-test', async (req, res) => {
     return res.status(400).json({ error: 'Um ou mais campos excedem o tamanho máximo permitido.' });
   }
 
-  const data = getPortalData();
+  const data = await getPortalData();
   const questions = data.questions || DEFAULT_QUESTIONS;
 
   if (answers.length !== questions.length) {
@@ -817,7 +808,7 @@ app.post('/api/submit-test', async (req, res) => {
 
   data.submissions = data.submissions || [];
   data.submissions.unshift(newSubmission);
-  savePortalData(data);
+  await savePortalData(data);
 
   // Send Discord Webhook if configured
   const webhookUrl = data.discordWebhook || process.env.DISCORD_WEBHOOK_URL;
