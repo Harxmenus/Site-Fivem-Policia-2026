@@ -1,0 +1,6 @@
+{
+  "name": "Portal GTO",
+  "description": "Portal oficial do Grupo Tático de Operações (GTO), incluindo história institucional, timeline, estatísticas, galeria de fotos e processo seletivo interativo de 15 questões com integração ao Discord.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
