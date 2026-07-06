@@ -7,9 +7,66 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { kv } from '@vercel/kv';
 import { put } from '@vercel/blob';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Load environment variables
 dotenv.config();
+
+// Supabase client (optional). To enable, set SUPABASE_URL and SUPABASE_SERVICE_ROLE
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_KEY;
+let supabase: SupabaseClient | null = null;
+if (SUPABASE_URL && SUPABASE_SERVICE_ROLE) {
+  try {
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
+      auth: { persistSession: false },
+    });
+    console.log('Supabase client initialized.');
+  } catch (err) {
+    console.warn('Failed to initialize Supabase client:', err);
+    supabase = null;
+  }
+}
+
+// Simple KV wrapper: use Supabase table `kv(key text primary key, value jsonb)` when available,
+// otherwise fall back to `@vercel/kv`.
+async function kvGet(key: string): Promise<any> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.from('kv').select('value').eq('key', key).maybeSingle();
+      if (error) throw error;
+      return data?.value ?? null;
+    } catch (err) {
+      console.error('Supabase KV get error:', err);
+      return null;
+    }
+  }
+  try {
+    return await kv.get(key as any);
+  } catch (err) {
+    console.error('Vercel KV get error:', err);
+    return null;
+  }
+}
+
+async function kvSet(key: string, value: any): Promise<void> {
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('kv').upsert({ key, value });
+      if (error) throw error;
+      return;
+    } catch (err) {
+      console.error('Supabase KV set error:', err);
+      throw err;
+    }
+  }
+  try {
+    await kv.set(key as any, value);
+  } catch (err) {
+    console.error('Vercel KV set error:', err);
+    throw err;
+  }
+}
 
 const app = express();
 app.disable('x-powered-by');
@@ -46,10 +103,10 @@ async function getAdminToken(): Promise<string> {
     return process.env.ADMIN_TOKEN_SECRET;
   }
   try {
-    const existing = await kv.get('admin_token');
+    const existing = await kvGet('admin_token');
     if (existing) return existing as string;
     const generated = crypto.randomBytes(32).toString('hex');
-    await kv.set('admin_token', generated);
+    await kvSet('admin_token', generated);
     return generated;
   } catch (err) {
     return crypto.randomBytes(32).toString('hex');
@@ -467,10 +524,10 @@ function cloneDefault<T>(value: T): T {
 // Reads the database file and applies safe, additive migrations.
 async function getPortalData(): Promise<any> {
   try {
-    let data = await kv.get<any>('portal_data');
+    let data = await kvGet('portal_data');
     if (!data) {
       data = cloneDefault(DEFAULT_PORTAL_DATA);
-      await kv.set('portal_data', data);
+      await kvSet('portal_data', data);
       return data;
     }
 
@@ -540,7 +597,7 @@ async function getPortalData(): Promise<any> {
 
 async function savePortalData(data: any): Promise<boolean> {
   try {
-    await kv.set('portal_data', data);
+    await kvSet('portal_data', data);
     return true;
   } catch (error) {
     console.error('Error writing portal data:', error);
@@ -730,9 +787,28 @@ app.post('/api/upload', requireAdmin, async (req, res) => {
 
     const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${extension}`;
 
-    // Save to Vercel Blob
-    const blob = await put(filename, buffer, { access: 'public' });
+    // Save to Supabase Storage if configured, otherwise Vercel Blob
+    if (supabase) {
+      try {
+        const bucket = 'uploads';
+        const path = filename;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(bucket)
+          .upload(path, buffer as any, { contentType: mimeType, upsert: false });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
+        const publicUrl = (urlData && (urlData.publicUrl || urlData.publicUrl)) || null;
+        if (!publicUrl) throw new Error('Failed to get public URL from Supabase Storage');
+        res.json({ success: true, url: publicUrl });
+        return;
+      } catch (supErr) {
+        console.error('Supabase upload error:', supErr);
+        // fallthrough to try Vercel Blob as a fallback
+      }
+    }
 
+    // Fallback: Save to Vercel Blob
+    const blob = await put(filename, buffer, { access: 'public' });
     res.json({ success: true, url: blob.url });
   } catch (err: any) {
     console.error('Upload error:', err);
