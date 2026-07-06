@@ -87,7 +87,7 @@ export default function AdminPanel({
 
   // Submission details modal
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
 
   // Custom delete confirmation state
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
@@ -141,14 +141,14 @@ const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
 
           const data = await response.json();
           onSuccess(data.url);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} catch (err: any) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (err: any) {
           alert('Erro ao fazer upload: ' + err.message);
         }
       };
       reader.readAsDataURL(file);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} catch (err: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
       alert('Erro ao ler arquivo: ' + err.message);
     }
   };
@@ -167,7 +167,7 @@ const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const handleSave = async (updatedFields: Partial<PortalData> & { adminCredentials?: any }) => {
+  const handleSave = async (updatedFields: Partial<PortalData> & { adminCredentials?: any }) => {
     setIsSaving(true);
     setSaveSuccess(false);
     setSaveError('');
@@ -195,8 +195,8 @@ const handleSave = async (updatedFields: Partial<PortalData> & { adminCredential
       await onRefreshData();
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} catch (err: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
       console.error(err);
       setSaveError(err.message || 'Não foi possível sincronizar com o servidor.');
     } finally {
@@ -546,8 +546,8 @@ const handleSave = async (updatedFields: Partial<PortalData> & { adminCredential
 
       const data = await response.json();
       setAiModal((prev) => ({ ...prev, result: data.result, loading: false }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       console.error(error);
       setAiModal((prev) => ({
         ...prev,
