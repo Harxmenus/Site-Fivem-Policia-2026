@@ -1,12 +1,28 @@
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { 
-  Eye, EyeOff, LayoutDashboard, History, Calendar, 
-  BarChart3, Image as ImageIcon, Users, Settings, LogOut, 
-  Save, Plus, Trash2, Sparkles, CheckCircle, 
-  AlertCircle, RefreshCw, Check
-} from "lucide-react";
-import { PortalData, TimelineEvent, StatisticItem, GalleryItem, QuestionItem } from "../types";
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  Eye,
+  EyeOff,
+  LayoutDashboard,
+  History,
+  Calendar,
+  BarChart3,
+  Image as ImageIcon,
+  Users,
+  Settings,
+  LogOut,
+  Save,
+  Plus,
+  Trash2,
+  Sparkles,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+  Check,
+} from 'lucide-react';
+import { PortalData, TimelineEvent, StatisticItem, GalleryItem, QuestionItem } from '../types';
 
 interface AdminPanelProps {
   onLogout: () => void;
@@ -15,11 +31,18 @@ interface AdminPanelProps {
   portalData: PortalData;
 }
 
-export default function AdminPanel({ onLogout, token, onRefreshData, portalData }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<"history" | "timeline" | "statistics" | "gallery" | "submissions" | "settings">("history");
+export default function AdminPanel({
+  onLogout,
+  token,
+  onRefreshData,
+  portalData,
+}: AdminPanelProps) {
+  const [activeTab, setActiveTab] = useState<
+    'history' | 'timeline' | 'statistics' | 'gallery' | 'submissions' | 'settings'
+  >('history');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState("");
+  const [saveError, setSaveError] = useState('');
 
   // AI Modal State
   const [aiModal, setAiModal] = useState<{
@@ -32,12 +55,12 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
     loading: boolean;
   }>({
     isOpen: false,
-    section: "",
-    targetField: "",
-    originalText: "",
-    instructions: "",
-    result: "",
-    loading: false
+    section: '',
+    targetField: '',
+    originalText: '',
+    instructions: '',
+    result: '',
+    loading: false,
   });
 
   // Editor states (initialized with portalData on load)
@@ -46,10 +69,10 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
   const [statisticsForm, setStatisticsForm] = useState<StatisticItem[]>(portalData.statistics);
   const [galleryForm, setGalleryForm] = useState<GalleryItem[]>(portalData.gallery);
   const [discordWebhook, setDiscordWebhook] = useState(portalData.discordWebhook);
-  const [namesText, setNamesText] = useState(portalData.history.homenagemNames?.join(", ") || "");
+  const [namesText, setNamesText] = useState(portalData.history.homenagemNames?.join(', ') || '');
   const [showWebhook, setShowWebhook] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Submission details modal
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
 
@@ -63,15 +86,15 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
     setStatisticsForm(portalData.statistics);
     setGalleryForm(portalData.gallery);
     setDiscordWebhook(portalData.discordWebhook);
-    setNamesText(portalData.history.homenagemNames?.join(", ") || "");
+    setNamesText(portalData.history.homenagemNames?.join(', ') || '');
   }, [portalData]);
 
   // Image Upload Handler
   const handleImageUpload = async (file: File, onSuccess: (url: string) => void) => {
     if (!file) return;
-    
+
     if (file.size > 25 * 1024 * 1024) {
-      alert("A imagem selecionada é muito grande. O limite máximo é 25MB.");
+      alert('A imagem selecionada é muito grande. O limite máximo é 25MB.');
       return;
     }
 
@@ -80,49 +103,49 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
       reader.onloadend = async () => {
         const base64String = reader.result as string;
         try {
-          const response = await fetch("/api/upload", {
-            method: "POST",
+          const response = await fetch('/api/upload', {
+            method: 'POST',
             headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
               name: file.name,
               type: file.type,
-              base64: base64String
-            })
+              base64: base64String,
+            }),
           });
 
           if (!response.ok) {
             if (response.status === 401) {
-              alert("Sua sessão expirou ou não é válida. Faça login novamente.");
+              alert('Sua sessão expirou ou não é válida. Faça login novamente.');
               onLogout();
               return;
             }
             const errData = await response.json();
-            throw new Error(errData.error || "Erro no upload.");
+            throw new Error(errData.error || 'Erro no upload.');
           }
 
           const data = await response.json();
           onSuccess(data.url);
         } catch (err: any) {
-          alert("Erro ao fazer upload: " + err.message);
+          alert('Erro ao fazer upload: ' + err.message);
         }
       };
       reader.readAsDataURL(file);
     } catch (err: any) {
-      alert("Erro ao ler arquivo: " + err.message);
+      alert('Erro ao ler arquivo: ' + err.message);
     }
   };
 
   const isValidImageUrl = (urlStr: string) => {
     if (!urlStr) return false;
     const cleanUrl = urlStr.trim();
-    if (cleanUrl.startsWith("/uploads/")) return true;
-    if (cleanUrl.startsWith("data:image/")) return true;
+    if (cleanUrl.startsWith('/uploads/')) return true;
+    if (cleanUrl.startsWith('data:image/')) return true;
     try {
       const parsed = new URL(cleanUrl);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
     } catch (_) {
       return false;
     }
@@ -131,26 +154,26 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
   const handleSave = async (updatedFields: Partial<PortalData> & { adminCredentials?: any }) => {
     setIsSaving(true);
     setSaveSuccess(false);
-    setSaveError("");
+    setSaveError('');
 
     try {
-      const response = await fetch("/api/content", {
-        method: "POST",
+      const response = await fetch('/api/content', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(updatedFields)
+        body: JSON.stringify(updatedFields),
       });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         if (response.status === 401) {
-          alert("Sua sessão expirou ou não é válida. Faça login novamente.");
+          alert('Sua sessão expirou ou não é válida. Faça login novamente.');
           onLogout();
           return;
         }
-        throw new Error(errData.error || "Erro ao atualizar o conteúdo no servidor.");
+        throw new Error(errData.error || 'Erro ao atualizar o conteúdo no servidor.');
       }
 
       await onRefreshData();
@@ -158,7 +181,7 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
       console.error(err);
-      setSaveError(err.message || "Não foi possível sincronizar com o servidor.");
+      setSaveError(err.message || 'Não foi possível sincronizar com o servidor.');
     } finally {
       setIsSaving(false);
     }
@@ -167,32 +190,34 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
   // History Actions
   const handleHistoryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setHistoryForm(prev => ({ ...prev, [name]: value }));
+    setHistoryForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const saveHistory = () => {
     if (!historyForm.title?.trim()) {
-      alert("O Título Oficial não pode ficar em branco.");
+      alert('O Título Oficial não pode ficar em branco.');
       return;
     }
     if (!historyForm.subtitle?.trim()) {
-      alert("O Slogan / Subtítulo não pode ficar em branco.");
+      alert('O Slogan / Subtítulo não pode ficar em branco.');
       return;
     }
     if (!historyForm.content?.trim()) {
-      alert("A História Institucional (Narrativa) não pode ficar em branco.");
+      alert('A História Institucional (Narrativa) não pode ficar em branco.');
       return;
     }
     if (!historyForm.about?.trim()) {
-      alert("O Sobre o Grupo GTO (Nosso Propósito) não pode ficar em branco.");
+      alert('O Sobre o Grupo GTO (Nosso Propósito) não pode ficar em branco.');
       return;
     }
     if (!historyForm.homenagemText?.trim()) {
-      alert("O Texto da Homenagem não pode ficar em branco.");
+      alert('O Texto da Homenagem não pode ficar em branco.');
       return;
     }
     if (!isValidImageUrl(historyForm.bannerUrl)) {
-      alert("A URL do Banner Principal não é válida. Insira uma URL de imagem válida (http/https) ou faça o upload de um arquivo.");
+      alert(
+        'A URL do Banner Principal não é válida. Insira uma URL de imagem válida (http/https) ou faça o upload de um arquivo.'
+      );
       return;
     }
     const cleaned = {
@@ -202,7 +227,7 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
       content: historyForm.content.trim(),
       about: historyForm.about.trim(),
       homenagemText: historyForm.homenagemText.trim(),
-      bannerUrl: historyForm.bannerUrl.trim()
+      bannerUrl: historyForm.bannerUrl.trim(),
     };
     setHistoryForm(cleaned);
     handleSave({ history: cleaned });
@@ -217,16 +242,16 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
   const addTimelineEvent = () => {
     const newEvent: TimelineEvent = {
-      id: "t-" + Date.now(),
-      year: "2026",
-      title: "Novo Evento Tático",
-      description: "Descrição sucinta do marco alcançado pela equipe."
+      id: 't-' + Date.now(),
+      year: '2026',
+      title: 'Novo Evento Tático',
+      description: 'Descrição sucinta do marco alcançado pela equipe.',
     };
     setTimelineForm([...timelineForm, newEvent]);
   };
 
   const deleteTimelineEvent = (id: string) => {
-    setTimelineForm(timelineForm.filter(item => item.id !== id));
+    setTimelineForm(timelineForm.filter((item) => item.id !== id));
   };
 
   const saveTimeline = () => {
@@ -244,11 +269,11 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
         return;
       }
     }
-    const cleanedTimeline = timelineForm.map(item => ({
+    const cleanedTimeline = timelineForm.map((item) => ({
       ...item,
       year: item.year.trim(),
       title: item.title.trim(),
-      description: item.description.trim()
+      description: item.description.trim(),
     }));
     setTimelineForm(cleanedTimeline);
     handleSave({ timeline: cleanedTimeline });
@@ -263,16 +288,16 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
   const addStatistic = () => {
     const newStat: StatisticItem = {
-      id: "s-" + Date.now(),
-      label: "Nova Métrica",
-      value: "0",
-      icon: "ShieldAlert"
+      id: 's-' + Date.now(),
+      label: 'Nova Métrica',
+      value: '0',
+      icon: 'ShieldAlert',
     } as StatisticItem;
     setStatisticsForm([...statisticsForm, newStat]);
   };
 
   const deleteStatistic = (id: string) => {
-    setStatisticsForm(statisticsForm.filter(item => item.id !== id));
+    setStatisticsForm(statisticsForm.filter((item) => item.id !== id));
   };
 
   const saveStatistics = () => {
@@ -290,11 +315,11 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
         return;
       }
     }
-    const cleanedStats = statisticsForm.map(item => ({
+    const cleanedStats = statisticsForm.map((item) => ({
       ...item,
       label: item.label.trim(),
       value: item.value.trim(),
-      icon: item.icon.trim()
+      icon: item.icon.trim(),
     }));
     setStatisticsForm(cleanedStats);
     handleSave({ statistics: cleanedStats });
@@ -309,39 +334,41 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
   const addGalleryItem = () => {
     const newItem: GalleryItem = {
-      id: "g-" + Date.now(),
-      url: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=800&auto=format&fit=crop",
-      caption: "Título da Imagem",
-      description: "Descrição opcional da fotografia operacional.",
-      date: "Maio de 2026",
-      category: "Patrulhamento",
-      badgeIcon: "Shield"
+      id: 'g-' + Date.now(),
+      url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=800&auto=format&fit=crop',
+      caption: 'Título da Imagem',
+      description: 'Descrição opcional da fotografia operacional.',
+      date: 'Maio de 2026',
+      category: 'Patrulhamento',
+      badgeIcon: 'Shield',
     };
     setGalleryForm([...galleryForm, newItem]);
   };
 
   const deleteGalleryItem = (id: string) => {
-    setGalleryForm(galleryForm.filter(item => item.id !== id));
+    setGalleryForm(galleryForm.filter((item) => item.id !== id));
   };
 
   const saveGallery = () => {
-    const cleanedGallery = galleryForm.map(item => ({
+    const cleanedGallery = galleryForm.map((item) => ({
       ...item,
       url: item.url.trim(),
-      caption: item.caption?.trim() || "",
-      description: item.description?.trim() || "",
-      date: item.date?.trim() || "",
-      category: item.category?.trim() || "Patrulhamento",
-      badgeIcon: item.badgeIcon?.trim() || "Shield"
+      caption: item.caption?.trim() || '',
+      description: item.description?.trim() || '',
+      date: item.date?.trim() || '',
+      category: item.category?.trim() || 'Patrulhamento',
+      badgeIcon: item.badgeIcon?.trim() || 'Shield',
     }));
-    
+
     for (let i = 0; i < cleanedGallery.length; i++) {
       if (!cleanedGallery[i].url) {
         alert(`A imagem ${i + 1} precisa ter uma URL preenchida.`);
         return;
       }
       if (!isValidImageUrl(cleanedGallery[i].url)) {
-        alert(`A imagem ${i + 1} possui uma URL inválida ou com formato incorreto. Certifique-se de que a URL começa com http://, https:// ou faça o upload direto do computador.`);
+        alert(
+          `A imagem ${i + 1} possui uma URL inválida ou com formato incorreto. Certifique-se de que a URL começa com http://, https:// ou faça o upload direto do computador.`
+        );
         return;
       }
       if (!cleanedGallery[i].caption) {
@@ -361,26 +388,26 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
   const deleteSubmission = async (id: string) => {
     try {
       const response = await fetch(`/api/submissions/${id}`, {
-        method: "DELETE",
+        method: 'DELETE',
         headers: {
-          "Authorization": `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
-      
+
       if (!response.ok) {
         if (response.status === 401) {
-          alert("Sua sessão expirou ou não é válida. Faça login novamente.");
+          alert('Sua sessão expirou ou não é válida. Faça login novamente.');
           onLogout();
           return;
         }
-        throw new Error("Falha ao excluir.");
+        throw new Error('Falha ao excluir.');
       }
       await onRefreshData();
       if (selectedSubmission?.id === id) {
         setSelectedSubmission(null);
       }
     } catch (err) {
-      alert("Erro ao remover ficha.");
+      alert('Erro ao remover ficha.');
     } finally {
       setSubmissionToDelete(null);
     }
@@ -388,9 +415,13 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
   // Discord Config Action
   const saveDiscordConfig = () => {
-    const trimmedWebhook = discordWebhook?.trim() || "";
-    if (trimmedWebhook && !trimmedWebhook.startsWith("https://discord.com/api/webhooks/") && !trimmedWebhook.startsWith("https://discordapp.com/api/webhooks/")) {
-      alert("URL de Webhook inválida. Ela deve começar com https://discord.com/api/webhooks/");
+    const trimmedWebhook = discordWebhook?.trim() || '';
+    if (
+      trimmedWebhook &&
+      !trimmedWebhook.startsWith('https://discord.com/api/webhooks/') &&
+      !trimmedWebhook.startsWith('https://discordapp.com/api/webhooks/')
+    ) {
+      alert('URL de Webhook inválida. Ela deve começar com https://discord.com/api/webhooks/');
       return;
     }
     setDiscordWebhook(trimmedWebhook);
@@ -399,8 +430,8 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
   // Password / Admin Config Action
   const [passForm, setPassForm] = useState({
-    username: "admin",
-    newPassword: ""
+    username: 'admin',
+    newPassword: '',
   });
   const [passSuccess, setPassSuccess] = useState(false);
 
@@ -410,47 +441,47 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
     const trimmedPassword = passForm.newPassword.trim();
 
     if (!trimmedUsername) {
-      alert("O nome de usuário não pode ficar em branco.");
+      alert('O nome de usuário não pode ficar em branco.');
       return;
     }
     if (!trimmedPassword) {
-      alert("Digite uma senha nova válida.");
+      alert('Digite uma senha nova válida.');
       return;
     }
     if (trimmedPassword.length < 6) {
-      alert("A nova senha deve ter pelo menos 6 caracteres para maior segurança.");
+      alert('A nova senha deve ter pelo menos 6 caracteres para maior segurança.');
       return;
     }
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/content", {
-        method: "POST",
+      const response = await fetch('/api/content', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           adminCredentials: {
             username: trimmedUsername,
-            password: trimmedPassword
-          }
-        })
+            password: trimmedPassword,
+          },
+        }),
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          alert("Sua sessão expirou ou não é válida. Faça login novamente.");
+          alert('Sua sessão expirou ou não é válida. Faça login novamente.');
           onLogout();
           return;
         }
-        throw new Error("Erro ao atualizar credenciais.");
+        throw new Error('Erro ao atualizar credenciais.');
       }
       setPassSuccess(true);
-      setPassForm({ username: trimmedUsername, newPassword: "" });
+      setPassForm({ username: trimmedUsername, newPassword: '' });
       setTimeout(() => setPassSuccess(false), 3000);
     } catch (err) {
-      alert("Erro ao salvar senha.");
+      alert('Erro ao salvar senha.');
     } finally {
       setIsSaving(false);
     }
@@ -463,48 +494,53 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
       section: sectionName,
       targetField: fieldName,
       originalText: currentText,
-      instructions: "Deixe mais imponente, tático e adequado ao linguajar de forças de elite militares brasileiras.",
-      result: "",
-      loading: false
+      instructions:
+        'Deixe mais imponente, tático e adequado ao linguajar de forças de elite militares brasileiras.',
+      result: '',
+      loading: false,
     });
   };
 
   const generateWithAi = async () => {
-    setAiModal(prev => ({ ...prev, loading: true, result: "" }));
+    setAiModal((prev) => ({ ...prev, loading: true, result: '' }));
     try {
-      const response = await fetch("/api/ai-suggest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/ai-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           section: aiModal.section,
           originalText: aiModal.originalText,
-          instructions: aiModal.instructions
-        })
+          instructions: aiModal.instructions,
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Erro na geração.");
+        throw new Error(errorData.error || 'Erro na geração.');
       }
 
       const data = await response.json();
-      setAiModal(prev => ({ ...prev, result: data.result, loading: false }));
+      setAiModal((prev) => ({ ...prev, result: data.result, loading: false }));
     } catch (error: any) {
       console.error(error);
-      setAiModal(prev => ({ ...prev, result: `Erro: ${error.message}. Verifique a API Key do Gemini no painel de segredos do AI Studio.`, loading: false }));
+      setAiModal((prev) => ({
+        ...prev,
+        result: `Erro: ${error.message}. Verifique a API Key do Gemini no painel de segredos do AI Studio.`,
+        loading: false,
+      }));
     }
   };
 
   const applyAiText = () => {
-    if (!aiModal.result || aiModal.result.startsWith("Erro:")) return;
-    
+    if (!aiModal.result || aiModal.result.startsWith('Erro:')) return;
+
     // Dynamically update correct state field
     const field = aiModal.targetField;
     if (field in historyForm) {
-      setHistoryForm(prev => ({ ...prev, [field]: aiModal.result }));
+      setHistoryForm((prev) => ({ ...prev, [field]: aiModal.result }));
     }
-    
-    setAiModal(prev => ({ ...prev, isOpen: false }));
+
+    setAiModal((prev) => ({ ...prev, isOpen: false }));
   };
 
   return (
@@ -517,13 +553,16 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl md:text-2xl font-bold text-white">Central Administrativa GTO</h2>
+              <h2 className="text-xl md:text-2xl font-bold text-white">
+                Central Administrativa GTO
+              </h2>
               <span className="px-2 py-0.5 text-[9px] bg-red-600 text-white font-mono rounded font-bold uppercase tracking-wider">
                 ADMIN ATIVO
               </span>
             </div>
             <p className="text-slate-400 text-xs mt-0.5">
-              Gerencie todo o conteúdo institucional, fotos da galeria, estatísticas e acompanhe inscrições em tempo real.
+              Gerencie todo o conteúdo institucional, fotos da galeria, estatísticas e acompanhe
+              inscrições em tempo real.
             </p>
           </div>
         </div>
@@ -545,46 +584,46 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
           <span className="px-3 py-1 text-[10px] uppercase font-bold text-slate-500 tracking-wider block font-mono">
             Gerenciar Conteúdo
           </span>
-          
+
           <button
-            onClick={() => setActiveTab("history")}
+            onClick={() => setActiveTab('history')}
             className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-              activeTab === "history" 
-                ? "bg-red-950/40 border-l-2 border-red-500 text-white" 
-                : "text-slate-400 hover:bg-slate-950 hover:text-white"
+              activeTab === 'history'
+                ? 'bg-red-950/40 border-l-2 border-red-500 text-white'
+                : 'text-slate-400 hover:bg-slate-950 hover:text-white'
             }`}
           >
             <History size={16} /> História e Diretrizes
           </button>
-          
+
           <button
-            onClick={() => setActiveTab("timeline")}
+            onClick={() => setActiveTab('timeline')}
             className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-              activeTab === "timeline" 
-                ? "bg-red-950/40 border-l-2 border-red-500 text-white" 
-                : "text-slate-400 hover:bg-slate-950 hover:text-white"
+              activeTab === 'timeline'
+                ? 'bg-red-950/40 border-l-2 border-red-500 text-white'
+                : 'text-slate-400 hover:bg-slate-950 hover:text-white'
             }`}
           >
             <Calendar size={16} /> Linha do Tempo
           </button>
 
           <button
-            onClick={() => setActiveTab("statistics")}
+            onClick={() => setActiveTab('statistics')}
             className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-              activeTab === "statistics" 
-                ? "bg-red-950/40 border-l-2 border-red-500 text-white" 
-                : "text-slate-400 hover:bg-slate-950 hover:text-white"
+              activeTab === 'statistics'
+                ? 'bg-red-950/40 border-l-2 border-red-500 text-white'
+                : 'text-slate-400 hover:bg-slate-950 hover:text-white'
             }`}
           >
             <BarChart3 size={16} /> Estatísticas
           </button>
 
           <button
-            onClick={() => setActiveTab("gallery")}
+            onClick={() => setActiveTab('gallery')}
             className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-              activeTab === "gallery" 
-                ? "bg-red-950/40 border-l-2 border-red-500 text-white" 
-                : "text-slate-400 hover:bg-slate-950 hover:text-white"
+              activeTab === 'gallery'
+                ? 'bg-red-950/40 border-l-2 border-red-500 text-white'
+                : 'text-slate-400 hover:bg-slate-950 hover:text-white'
             }`}
           >
             <ImageIcon size={16} /> Galeria Operacional
@@ -597,11 +636,11 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
           </span>
 
           <button
-            onClick={() => setActiveTab("submissions")}
+            onClick={() => setActiveTab('submissions')}
             className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
-              activeTab === "submissions" 
-                ? "bg-red-950/40 border-l-2 border-red-500 text-white" 
-                : "text-slate-400 hover:bg-slate-950 hover:text-white"
+              activeTab === 'submissions'
+                ? 'bg-red-950/40 border-l-2 border-red-500 text-white'
+                : 'text-slate-400 hover:bg-slate-950 hover:text-white'
             }`}
           >
             <span className="flex items-center gap-2">
@@ -615,11 +654,11 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
           </button>
 
           <button
-            onClick={() => setActiveTab("settings")}
+            onClick={() => setActiveTab('settings')}
             className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-              activeTab === "settings" 
-                ? "bg-red-950/40 border-l-2 border-red-500 text-white" 
-                : "text-slate-400 hover:bg-slate-950 hover:text-white"
+              activeTab === 'settings'
+                ? 'bg-red-950/40 border-l-2 border-red-500 text-white'
+                : 'text-slate-400 hover:bg-slate-950 hover:text-white'
             }`}
           >
             <Settings size={16} /> Integração e Acesso
@@ -631,17 +670,18 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
           {/* Status Bar */}
           <AnimatePresence>
             {saveSuccess && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 className="bg-emerald-950/40 border border-emerald-800 text-emerald-300 px-4 py-3 rounded-xl text-xs flex items-center gap-2 mb-4 font-semibold"
               >
-                <CheckCircle size={16} className="text-emerald-400 shrink-0" /> Sincronização Concluída! Todo o portal foi atualizado em tempo real.
+                <CheckCircle size={16} className="text-emerald-400 shrink-0" /> Sincronização
+                Concluída! Todo o portal foi atualizado em tempo real.
               </motion.div>
             )}
             {saveError && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -653,23 +693,28 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
           </AnimatePresence>
 
           {/* TAB 1: HISTORY */}
-          {activeTab === "history" && (
+          {activeTab === 'history' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-white">História e Diretrizes Institucionais</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                  História e Diretrizes Institucionais
+                </h3>
                 <button
                   onClick={saveHistory}
                   disabled={isSaving}
                   className="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />} Salvar Seção
+                  {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}{' '}
+                  Salvar Seção
                 </button>
               </div>
 
               <div className="grid grid-cols-1 gap-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Título Oficial</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Título Oficial
+                    </label>
                     <input
                       type="text"
                       name="title"
@@ -680,7 +725,9 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Slogan / Subtítulo</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Slogan / Subtítulo
+                    </label>
                     <input
                       type="text"
                       name="subtitle"
@@ -692,7 +739,9 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">URL do Banner Principal</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    URL do Banner Principal
+                  </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -710,14 +759,14 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                         const file = e.target.files?.[0];
                         if (file) {
                           handleImageUpload(file, (uploadedUrl) => {
-                            setHistoryForm(prev => {
+                            setHistoryForm((prev) => {
                               const updated = { ...prev, bannerUrl: uploadedUrl };
                               handleSave({ history: updated }); // Auto-save history banner
                               return updated;
                             });
                           });
                         }
-                        e.target.value = "";
+                        e.target.value = '';
                       }}
                     />
                     <label
@@ -731,9 +780,13 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">História Institucional (Narrativa)</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      História Institucional (Narrativa)
+                    </label>
                     <button
-                      onClick={() => openAiWriter("História Institucional GTO", "content", historyForm.content)}
+                      onClick={() =>
+                        openAiWriter('História Institucional GTO', 'content', historyForm.content)
+                      }
                       className="text-[10px] font-semibold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer bg-red-950/30 px-2 py-0.5 rounded border border-red-900/40"
                     >
                       <Sparkles size={11} /> Otimizar com IA Gemini
@@ -750,9 +803,13 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sobre o Grupo GTO (Nosso Propósito)</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Sobre o Grupo GTO (Nosso Propósito)
+                    </label>
                     <button
-                      onClick={() => openAiWriter("Sobre o Grupo GTO", "about", historyForm.about || "")}
+                      onClick={() =>
+                        openAiWriter('Sobre o Grupo GTO', 'about', historyForm.about || '')
+                      }
                       className="text-[9px] font-semibold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer bg-red-950/30 px-1.5 py-0.5 rounded border border-red-900/40"
                     >
                       <Sparkles size={10} /> Otimizar com IA
@@ -760,7 +817,7 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                   </div>
                   <textarea
                     name="about"
-                    value={historyForm.about || ""}
+                    value={historyForm.about || ''}
                     onChange={handleHistoryChange}
                     rows={4}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-red-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none transition-all leading-relaxed"
@@ -770,9 +827,17 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Texto da Homenagem</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Texto da Homenagem
+                      </label>
                       <button
-                        onClick={() => openAiWriter("Texto de Homenagem GTO", "homenagemText", historyForm.homenagemText || "")}
+                        onClick={() =>
+                          openAiWriter(
+                            'Texto de Homenagem GTO',
+                            'homenagemText',
+                            historyForm.homenagemText || ''
+                          )
+                        }
                         className="text-[9px] font-semibold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer bg-red-950/30 px-1.5 py-0.5 rounded border border-red-900/40"
                       >
                         <Sparkles size={10} /> IA
@@ -780,7 +845,7 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                     </div>
                     <textarea
                       name="homenagemText"
-                      value={historyForm.homenagemText || ""}
+                      value={historyForm.homenagemText || ''}
                       onChange={handleHistoryChange}
                       rows={5}
                       className="w-full bg-slate-950 border border-slate-800 focus:border-red-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none transition-all leading-relaxed"
@@ -788,21 +853,29 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Membros Homenageados (Separados por vírgula)</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Membros Homenageados (Separados por vírgula)
+                    </label>
                     <textarea
                       name="homenagemNames"
                       value={namesText}
                       onChange={(e) => {
                         const val = e.target.value;
                         setNamesText(val);
-                        const list = val.split(",").map(item => item.trim()).filter(Boolean);
-                        setHistoryForm(prev => ({ ...prev, homenagemNames: list }));
+                        const list = val
+                          .split(',')
+                          .map((item) => item.trim())
+                          .filter(Boolean);
+                        setHistoryForm((prev) => ({ ...prev, homenagemNames: list }));
                       }}
                       rows={5}
                       placeholder="Ex: Huanzinho77, PlayboyRJ, Marcos Baloso..."
                       className="w-full bg-slate-950 border border-slate-800 focus:border-red-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none transition-all leading-relaxed font-mono font-medium"
                     />
-                    <p className="text-[10px] text-slate-500 mt-1">Os veteranos acima receberão insígnias oficiais de operadores destacados no portal.</p>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Os veteranos acima receberão insígnias oficiais de operadores destacados no
+                      portal.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -810,12 +883,16 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
           )}
 
           {/* TAB 2: TIMELINE */}
-          {activeTab === "timeline" && (
+          {activeTab === 'timeline' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">Linha do Tempo de Glórias</h3>
-                  <p className="text-slate-400 text-[10px] mt-0.5">Marcos e datas importantes conquistadas pela corporação.</p>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Linha do Tempo de Glórias
+                  </h3>
+                  <p className="text-slate-400 text-[10px] mt-0.5">
+                    Marcos e datas importantes conquistadas pela corporação.
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -829,40 +906,52 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                     disabled={isSaving}
                     className="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />} Salvar Linha do Tempo
+                    {isSaving ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      <Save size={14} />
+                    )}{' '}
+                    Salvar Linha do Tempo
                   </button>
                 </div>
               </div>
 
               <div className="space-y-4">
                 {timelineForm.map((item, idx) => (
-                  <div key={item.id} className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-start relative group">
+                  <div
+                    key={item.id}
+                    className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-start relative group"
+                  >
                     <div className="md:col-span-2 space-y-1">
                       <label className="text-[9px] font-bold text-slate-500 uppercase">Ano</label>
                       <input
                         type="text"
                         value={item.year}
-                        onChange={(e) => handleTimelineChange(idx, "year", e.target.value)}
+                        onChange={(e) => handleTimelineChange(idx, 'year', e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono font-bold focus:outline-none"
                       />
                     </div>
 
                     <div className="md:col-span-4 space-y-1">
-                      <label className="text-[9px] font-bold text-slate-500 uppercase">Título do Evento</label>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase">
+                        Título do Evento
+                      </label>
                       <input
                         type="text"
                         value={item.title}
-                        onChange={(e) => handleTimelineChange(idx, "title", e.target.value)}
+                        onChange={(e) => handleTimelineChange(idx, 'title', e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none"
                       />
                     </div>
 
                     <div className="md:col-span-5 space-y-1">
-                      <label className="text-[9px] font-bold text-slate-500 uppercase">Breve Descrição</label>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase">
+                        Breve Descrição
+                      </label>
                       <input
                         type="text"
                         value={item.description}
-                        onChange={(e) => handleTimelineChange(idx, "description", e.target.value)}
+                        onChange={(e) => handleTimelineChange(idx, 'description', e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none"
                       />
                     </div>
@@ -880,19 +969,25 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                 ))}
 
                 {timelineForm.length === 0 && (
-                  <p className="text-center text-slate-500 text-xs py-8">Nenhum evento registrado. Clique em adicionar.</p>
+                  <p className="text-center text-slate-500 text-xs py-8">
+                    Nenhum evento registrado. Clique em adicionar.
+                  </p>
                 )}
               </div>
             </div>
           )}
 
           {/* TAB 3: STATISTICS */}
-          {activeTab === "statistics" && (
+          {activeTab === 'statistics' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">Estatísticas e Métricas Operacionais</h3>
-                  <p className="text-slate-400 text-[10px] mt-0.5">Indicadores chave exibidos em destaque no portal principal.</p>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Estatísticas e Métricas Operacionais
+                  </h3>
+                  <p className="text-slate-400 text-[10px] mt-0.5">
+                    Indicadores chave exibidos em destaque no portal principal.
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -906,16 +1001,26 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                     disabled={isSaving}
                     className="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />} Salvar Estatísticas
+                    {isSaving ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      <Save size={14} />
+                    )}{' '}
+                    Salvar Estatísticas
                   </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {statisticsForm.map((stat, idx) => (
-                  <div key={stat.id} className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 space-y-3">
+                  <div
+                    key={stat.id}
+                    className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 space-y-3"
+                  >
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-mono text-red-400 font-bold">MÉTRICA {idx + 1}</span>
+                      <span className="text-[10px] font-mono text-red-400 font-bold">
+                        MÉTRICA {idx + 1}
+                      </span>
                       <div className="flex items-center gap-2">
                         <span className="text-[9px] text-slate-500 font-mono">ID: {stat.id}</span>
                         <button
@@ -930,32 +1035,38 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
                     <div className="grid grid-cols-3 gap-2">
                       <div className="col-span-2 space-y-1">
-                        <label className="text-[9px] font-bold text-slate-500 uppercase">Rótulo / Descritor</label>
+                        <label className="text-[9px] font-bold text-slate-500 uppercase">
+                          Rótulo / Descritor
+                        </label>
                         <input
                           type="text"
                           value={stat.label}
-                          onChange={(e) => handleStatChange(idx, "label", e.target.value)}
+                          onChange={(e) => handleStatChange(idx, 'label', e.target.value)}
                           className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-500 uppercase">Valor Exibido</label>
+                        <label className="text-[9px] font-bold text-slate-500 uppercase">
+                          Valor Exibido
+                        </label>
                         <input
                           type="text"
                           value={stat.value}
-                          onChange={(e) => handleStatChange(idx, "value", e.target.value)}
+                          onChange={(e) => handleStatChange(idx, 'value', e.target.value)}
                           className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2 py-1.5 text-xs text-white font-mono font-bold focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-500 uppercase block">Ícone Lucide (Ex: ShieldAlert, Award, Flame, UserX)</label>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase block">
+                        Ícone Lucide (Ex: ShieldAlert, Award, Flame, UserX)
+                      </label>
                       <input
                         type="text"
                         value={stat.icon}
-                        onChange={(e) => handleStatChange(idx, "icon", e.target.value)}
+                        onChange={(e) => handleStatChange(idx, 'icon', e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none"
                       />
                     </div>
@@ -963,19 +1074,25 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                 ))}
 
                 {statisticsForm.length === 0 && (
-                  <p className="col-span-2 text-center text-slate-500 text-xs py-8">Nenhuma métrica cadastrada. Clique em adicionar.</p>
+                  <p className="col-span-2 text-center text-slate-500 text-xs py-8">
+                    Nenhuma métrica cadastrada. Clique em adicionar.
+                  </p>
                 )}
               </div>
             </div>
           )}
 
           {/* TAB 4: GALLERY */}
-          {activeTab === "gallery" && (
+          {activeTab === 'gallery' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">Galeria Operacional de Imagens</h3>
-                  <p className="text-slate-400 text-[10px] mt-0.5">URLs de fotos institucionais de alta definição (Unsplash, Discord, etc).</p>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Galeria Operacional de Imagens
+                  </h3>
+                  <p className="text-slate-400 text-[10px] mt-0.5">
+                    URLs de fotos institucionais de alta definição (Unsplash, Discord, etc).
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -989,17 +1106,27 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                     disabled={isSaving}
                     className="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />} Salvar Galeria
+                    {isSaving ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      <Save size={14} />
+                    )}{' '}
+                    Salvar Galeria
                   </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {galleryForm.map((item, idx) => (
-                  <div key={item.id} className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 space-y-3 relative overflow-hidden flex flex-col justify-between">
+                  <div
+                    key={item.id}
+                    className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 space-y-3 relative overflow-hidden flex flex-col justify-between"
+                  >
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-mono text-slate-500">MÍDIA {idx + 1}</span>
+                        <span className="text-[10px] font-mono text-slate-500">
+                          MÍDIA {idx + 1}
+                        </span>
                         <button
                           onClick={() => deleteGalleryItem(item.id)}
                           className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-950/40 rounded transition-all cursor-pointer border border-transparent hover:border-red-900/40"
@@ -1010,24 +1137,27 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                       </div>
 
                       <div className="aspect-video w-full rounded-lg overflow-hidden bg-slate-900 border border-slate-800 relative">
-                        <img 
-                          src={item.url} 
-                          alt="preview" 
+                        <img
+                          src={item.url}
+                          alt="preview"
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1590418606746-018840f9cd0f?q=80&w=300&auto=format&fit=crop";
+                            (e.target as HTMLImageElement).src =
+                              'https://images.unsplash.com/photo-1590418606746-018840f9cd0f?q=80&w=300&auto=format&fit=crop';
                           }}
                         />
                       </div>
 
                       <div className="space-y-2">
                         <div className="space-y-0.5">
-                          <label className="text-[9px] font-bold text-slate-500 uppercase">URL do Arquivo de Imagem</label>
+                          <label className="text-[9px] font-bold text-slate-500 uppercase">
+                            URL do Arquivo de Imagem
+                          </label>
                           <div className="flex gap-2">
                             <input
                               type="text"
                               value={item.url}
-                              onChange={(e) => handleGalleryChange(idx, "url", e.target.value)}
+                              onChange={(e) => handleGalleryChange(idx, 'url', e.target.value)}
                               className="flex-1 bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2 py-1 text-[11px] text-white font-mono focus:outline-none"
                             />
                             <input
@@ -1039,7 +1169,7 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   handleImageUpload(file, (uploadedUrl) => {
-                                    setGalleryForm(prev => {
+                                    setGalleryForm((prev) => {
                                       const updated = [...prev];
                                       updated[idx] = { ...updated[idx], url: uploadedUrl };
                                       handleSave({ gallery: updated }); // Auto-save gallery image upload
@@ -1047,7 +1177,7 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                                     });
                                   });
                                 }
-                                e.target.value = "";
+                                e.target.value = '';
                               }}
                             />
                             <label
@@ -1060,31 +1190,39 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                         </div>
 
                         <div className="space-y-0.5">
-                          <label className="text-[9px] font-bold text-slate-500 uppercase">Título / Legenda</label>
+                          <label className="text-[9px] font-bold text-slate-500 uppercase">
+                            Título / Legenda
+                          </label>
                           <input
                             type="text"
                             value={item.caption}
-                            onChange={(e) => handleGalleryChange(idx, "caption", e.target.value)}
+                            onChange={(e) => handleGalleryChange(idx, 'caption', e.target.value)}
                             className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none"
                           />
                         </div>
 
                         <div className="space-y-0.5">
-                          <label className="text-[9px] font-bold text-slate-500 uppercase">Descrição Curta (Opcional)</label>
+                          <label className="text-[9px] font-bold text-slate-500 uppercase">
+                            Descrição Curta (Opcional)
+                          </label>
                           <input
                             type="text"
                             placeholder="Breve descrição da foto..."
-                            value={item.description || ""}
-                            onChange={(e) => handleGalleryChange(idx, "description", e.target.value)}
+                            value={item.description || ''}
+                            onChange={(e) =>
+                              handleGalleryChange(idx, 'description', e.target.value)
+                            }
                             className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none"
                           />
                         </div>
 
                         <div className="space-y-0.5">
-                          <label className="text-[9px] font-bold text-slate-500 uppercase">Categoria</label>
+                          <label className="text-[9px] font-bold text-slate-500 uppercase">
+                            Categoria
+                          </label>
                           <select
-                            value={item.category || "Patrulhamento"}
-                            onChange={(e) => handleGalleryChange(idx, "category", e.target.value)}
+                            value={item.category || 'Patrulhamento'}
+                            onChange={(e) => handleGalleryChange(idx, 'category', e.target.value)}
                             className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2 py-1.5 text-[11px] text-white focus:outline-none"
                           >
                             <option value="Operações">Operações</option>
@@ -1096,10 +1234,12 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                         </div>
 
                         <div className="space-y-0.5">
-                          <label className="text-[9px] font-bold text-slate-500 uppercase">Ícone do GTO Tático</label>
+                          <label className="text-[9px] font-bold text-slate-500 uppercase">
+                            Ícone do GTO Tático
+                          </label>
                           <select
-                            value={item.badgeIcon || "Shield"}
-                            onChange={(e) => handleGalleryChange(idx, "badgeIcon", e.target.value)}
+                            value={item.badgeIcon || 'Shield'}
+                            onChange={(e) => handleGalleryChange(idx, 'badgeIcon', e.target.value)}
                             className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2 py-1.5 text-[11px] text-white focus:outline-none"
                           >
                             <option value="Shield">🛡️ Escudo</option>
@@ -1115,11 +1255,13 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                         </div>
 
                         <div className="space-y-0.5">
-                          <label className="text-[9px] font-bold text-slate-500 uppercase">Data de Registro</label>
+                          <label className="text-[9px] font-bold text-slate-500 uppercase">
+                            Data de Registro
+                          </label>
                           <input
                             type="text"
                             value={item.date}
-                            onChange={(e) => handleGalleryChange(idx, "date", e.target.value)}
+                            onChange={(e) => handleGalleryChange(idx, 'date', e.target.value)}
                             className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none"
                           />
                         </div>
@@ -1129,56 +1271,76 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                 ))}
 
                 {galleryForm.length === 0 && (
-                  <p className="col-span-2 text-center text-slate-500 text-xs py-8">Nenhuma imagem na galeria. Clique em adicionar.</p>
+                  <p className="col-span-2 text-center text-slate-500 text-xs py-8">
+                    Nenhuma imagem na galeria. Clique em adicionar.
+                  </p>
                 )}
               </div>
             </div>
           )}
 
           {/* TAB 5: CANDIDATE SUBMISSIONS */}
-          {activeTab === "submissions" && (
+          {activeTab === 'submissions' && (
             <div className="space-y-6">
               <div className="border-b border-slate-800 pb-3">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
                   Inscrições Recebidas ({portalData.submissions.length})
                 </h3>
-                <p className="text-slate-400 text-[10px] mt-0.5">Fichas de candidatos triadas automaticamente a partir do teste de 15 questões.</p>
+                <p className="text-slate-400 text-[10px] mt-0.5">
+                  Fichas de candidatos triadas automaticamente a partir do teste de 15 questões.
+                </p>
               </div>
 
               <div className="space-y-3">
                 {portalData.submissions.map((sub) => {
                   const percent = Math.round((sub.score / 15) * 100);
-                  const formattedDate = new Date(sub.timestamp).toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit"
+                  const formattedDate = new Date(sub.timestamp).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
                   });
 
                   return (
-                    <div 
-                      key={sub.id} 
+                    <div
+                      key={sub.id}
                       className={`bg-slate-950/60 border rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
-                        sub.passed ? "border-emerald-950 hover:border-emerald-800/80" : "border-slate-800 hover:border-red-950/60"
+                        sub.passed
+                          ? 'border-emerald-950 hover:border-emerald-800/80'
+                          : 'border-slate-800 hover:border-red-950/60'
                       }`}
                     >
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h4 className="text-sm font-bold text-white">{sub.name}</h4>
-                          <span className={`text-[9px] font-bold font-mono px-2 py-0.5 rounded-full ${
-                            sub.passed ? "bg-emerald-950 text-emerald-400 border border-emerald-900/40" : "bg-red-950 text-red-400 border border-red-900/40"
-                          }`}>
-                            {sub.passed ? `APROVADO (${sub.score}/15)` : `REPROVADO (${sub.score}/15)`}
+                          <span
+                            className={`text-[9px] font-bold font-mono px-2 py-0.5 rounded-full ${
+                              sub.passed
+                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-900/40'
+                                : 'bg-red-950 text-red-400 border border-red-900/40'
+                            }`}
+                          >
+                            {sub.passed
+                              ? `APROVADO (${sub.score}/15)`
+                              : `REPROVADO (${sub.score}/15)`}
                           </span>
                         </div>
-                        
+
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-400 text-xs font-mono">
-                          <span className="flex items-center gap-1"><Users size={12} className="text-red-500" /> Discord: <strong className="text-slate-200">{sub.discordTag}</strong></span>
+                          <span className="flex items-center gap-1">
+                            <Users size={12} className="text-red-500" /> Discord:{' '}
+                            <strong className="text-slate-200">{sub.discordTag}</strong>
+                          </span>
                           <span>•</span>
-                          <span>Passaporte (ID): <strong className="text-slate-200">{sub.passport || sub.phone}</strong></span>
+                          <span>
+                            Passaporte (ID):{' '}
+                            <strong className="text-slate-200">{sub.passport || sub.phone}</strong>
+                          </span>
                           <span>•</span>
-                          <span>Idade: <strong className="text-slate-200">{sub.age} anos</strong></span>
+                          <span>
+                            Idade: <strong className="text-slate-200">{sub.age} anos</strong>
+                          </span>
                         </div>
 
                         <div className="text-[10px] text-slate-500 font-mono pt-1">
@@ -1215,21 +1377,28 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
           )}
 
           {/* TAB 6: SETTINGS & PASSWORD */}
-          {activeTab === "settings" && (
+          {activeTab === 'settings' && (
             <div className="space-y-8">
               {/* Discord Webhook URL Configuration */}
               <div className="space-y-4">
                 <div className="border-b border-slate-800 pb-3">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">Integração com Discord</h3>
-                  <p className="text-slate-400 text-[10px] mt-0.5">Configure um Webhook de canal para receber notificações instantâneas de novas inscrições táticas.</p>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Integração com Discord
+                  </h3>
+                  <p className="text-slate-400 text-[10px] mt-0.5">
+                    Configure um Webhook de canal para receber notificações instantâneas de novas
+                    inscrições táticas.
+                  </p>
                 </div>
 
                 <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-5 space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Discord Webhook URL</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Discord Webhook URL
+                    </label>
                     <div className="relative">
                       <input
-                        type={showWebhook ? "text" : "password"}
+                        type={showWebhook ? 'text' : 'password'}
                         value={discordWebhook}
                         onChange={(e) => setDiscordWebhook(e.target.value)}
                         placeholder="https://discord.com/api/webhooks/..."
@@ -1237,15 +1406,17 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                       />
                       <button
                         type="button"
-                        onClick={() => setShowWebhook(prev => !prev)}
+                        onClick={() => setShowWebhook((prev) => !prev)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-all cursor-pointer"
-                        title={showWebhook ? "Ocultar URL" : "Exibir URL"}
+                        title={showWebhook ? 'Ocultar URL' : 'Exibir URL'}
                       >
                         {showWebhook ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-relaxed">
-                      Deixe em branco se preferir desativar o webhook. Suas notificações de embed de alta fidelidade serão enviadas imediatamente para o canal vinculado do Discord sempre que um candidato realizar o teste tático de 15 questões.
+                      Deixe em branco se preferir desativar o webhook. Suas notificações de embed de
+                      alta fidelidade serão enviadas imediatamente para o canal vinculado do Discord
+                      sempre que um candidato realizar o teste tático de 15 questões.
                     </p>
                   </div>
 
@@ -1255,7 +1426,12 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                       disabled={isSaving}
                       className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
                     >
-                      {isSaving ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />} Salvar Integração
+                      {isSaving ? (
+                        <RefreshCw size={12} className="animate-spin" />
+                      ) : (
+                        <Save size={12} />
+                      )}{' '}
+                      Salvar Integração
                     </button>
                   </div>
                 </div>
@@ -1264,11 +1440,18 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
               {/* Password / Admin Accounts Configuration */}
               <div className="space-y-4">
                 <div className="border-b border-slate-800 pb-3">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">Acesso de Administrador</h3>
-                  <p className="text-slate-400 text-[10px] mt-0.5">Altere as credenciais de login para a Central Administrativa.</p>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Acesso de Administrador
+                  </h3>
+                  <p className="text-slate-400 text-[10px] mt-0.5">
+                    Altere as credenciais de login para a Central Administrativa.
+                  </p>
                 </div>
 
-                <form onSubmit={savePassword} className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-5 space-y-4">
+                <form
+                  onSubmit={savePassword}
+                  className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-5 space-y-4"
+                >
                   {passSuccess && (
                     <div className="bg-emerald-950/30 border border-emerald-900/60 text-emerald-300 px-3 py-2 rounded-lg text-xs font-semibold">
                       Credenciais atualizadas com sucesso! Guarde sua nova senha.
@@ -1277,30 +1460,38 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Usuário</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Usuário
+                      </label>
                       <input
                         type="text"
                         value={passForm.username}
-                        onChange={(e) => setPassForm(prev => ({ ...prev, username: e.target.value }))}
+                        onChange={(e) =>
+                          setPassForm((prev) => ({ ...prev, username: e.target.value }))
+                        }
                         className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-xl px-4 py-2 text-xs text-white focus:outline-none"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nova Senha Tática</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Nova Senha Tática
+                      </label>
                       <div className="relative">
                         <input
-                          type={showPassword ? "text" : "password"}
+                          type={showPassword ? 'text' : 'password'}
                           value={passForm.newPassword}
-                          onChange={(e) => setPassForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                          onChange={(e) =>
+                            setPassForm((prev) => ({ ...prev, newPassword: e.target.value }))
+                          }
                           placeholder="Mínimo de 6 caracteres"
                           className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-xl pl-4 pr-11 py-2 text-xs text-white focus:outline-none font-mono"
                         />
                         <button
                           type="button"
-                          onClick={() => setShowPassword(prev => !prev)}
+                          onClick={() => setShowPassword((prev) => !prev)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-all cursor-pointer"
-                          title={showPassword ? "Ocultar senha" : "Exibir senha"}
+                          title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
                         >
                           {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
@@ -1314,7 +1505,12 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                       disabled={isSaving}
                       className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
                     >
-                      {isSaving ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />} Atualizar Credenciais
+                      {isSaving ? (
+                        <RefreshCw size={12} className="animate-spin" />
+                      ) : (
+                        <Save size={12} />
+                      )}{' '}
+                      Atualizar Credenciais
                     </button>
                   </div>
                 </form>
@@ -1328,7 +1524,7 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
       <AnimatePresence>
         {aiModal.isOpen && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -1338,8 +1534,8 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                 <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
                   <Sparkles size={16} className="text-red-500" /> Redator Inteligente Gemini AI
                 </h4>
-                <button 
-                  onClick={() => setAiModal(prev => ({ ...prev, isOpen: false }))}
+                <button
+                  onClick={() => setAiModal((prev) => ({ ...prev, isOpen: false }))}
                   className="text-slate-400 hover:text-white font-bold text-sm"
                 >
                   ✕
@@ -1348,15 +1544,21 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
               <div className="p-5 space-y-4">
                 <div className="text-xs text-slate-400 leading-relaxed">
-                  A Inteligência Artificial do <strong className="text-white">Gemini</strong> reescreverá seu texto atual utilizando uma linguagem militarizada imponente, patriótica e adequada à elite do Grupo Tático de Operações.
+                  A Inteligência Artificial do <strong className="text-white">Gemini</strong>{' '}
+                  reescreverá seu texto atual utilizando uma linguagem militarizada imponente,
+                  patriótica e adequada à elite do Grupo Tático de Operações.
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Linguajar ou Tom Preferencial</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Linguajar ou Tom Preferencial
+                  </label>
                   <input
                     type="text"
                     value={aiModal.instructions}
-                    onChange={(e) => setAiModal(prev => ({ ...prev, instructions: e.target.value }))}
+                    onChange={(e) =>
+                      setAiModal((prev) => ({ ...prev, instructions: e.target.value }))
+                    }
                     placeholder="Instruções para o redator..."
                     className="w-full bg-slate-950 border border-slate-800 focus:border-red-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
                   />
@@ -1375,25 +1577,29 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
 
                 <div className="flex gap-2 pt-2">
                   <button
-                    onClick={() => setAiModal(prev => ({ ...prev, isOpen: false }))}
+                    onClick={() => setAiModal((prev) => ({ ...prev, isOpen: false }))}
                     className="flex-1 px-4 py-2 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-400 text-xs font-semibold rounded-xl cursor-pointer"
                   >
                     Descartar
                   </button>
-                  
+
                   <button
                     onClick={generateWithAi}
                     disabled={aiModal.loading}
                     className="flex-1 px-4 py-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     {aiModal.loading ? (
-                      <><RefreshCw size={14} className="animate-spin" /> Escrevendo com IA...</>
+                      <>
+                        <RefreshCw size={14} className="animate-spin" /> Escrevendo com IA...
+                      </>
                     ) : (
-                      <><Sparkles size={14} /> {aiModal.result ? "Re-gerar texto" : "Gerar com IA"}</>
+                      <>
+                        <Sparkles size={14} /> {aiModal.result ? 'Re-gerar texto' : 'Gerar com IA'}
+                      </>
                     )}
                   </button>
 
-                  {aiModal.result && !aiModal.result.startsWith("Erro:") && (
+                  {aiModal.result && !aiModal.result.startsWith('Erro:') && (
                     <button
                       onClick={applyAiText}
                       className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl cursor-pointer flex items-center gap-1"
@@ -1412,7 +1618,7 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
       <AnimatePresence>
         {selectedSubmission && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
@@ -1423,9 +1629,11 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                   <h4 className="text-sm font-bold text-white uppercase font-mono">
                     Gabarito do Candidato: {selectedSubmission.name}
                   </h4>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Visualização detalhada das 15 respostas marcadas no teste tático.</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Visualização detalhada das 15 respostas marcadas no teste tático.
+                  </p>
                 </div>
-                <button 
+                <button
                   onClick={() => setSelectedSubmission(null)}
                   className="text-slate-400 hover:text-white font-bold text-sm"
                 >
@@ -1440,9 +1648,15 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                     <strong className="text-white text-sm">{selectedSubmission.discordTag}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 uppercase block text-[9px]">Resultado Geral</span>
-                    <strong className={selectedSubmission.passed ? "text-emerald-400" : "text-red-400"}>
-                      {selectedSubmission.passed ? `APROVADO (${selectedSubmission.score}/15)` : `REPROVADO (${selectedSubmission.score}/15)`}
+                    <span className="text-slate-500 uppercase block text-[9px]">
+                      Resultado Geral
+                    </span>
+                    <strong
+                      className={selectedSubmission.passed ? 'text-emerald-400' : 'text-red-400'}
+                    >
+                      {selectedSubmission.passed
+                        ? `APROVADO (${selectedSubmission.score}/15)`
+                        : `REPROVADO (${selectedSubmission.score}/15)`}
                     </strong>
                   </div>
                   <div>
@@ -1450,33 +1664,54 @@ export default function AdminPanel({ onLogout, token, onRefreshData, portalData 
                     <strong className="text-white">{selectedSubmission.age} anos</strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 uppercase block text-[9px]">Passaporte (ID)</span>
-                    <strong className="text-white">{selectedSubmission.passport || selectedSubmission.phone}</strong>
+                    <span className="text-slate-500 uppercase block text-[9px]">
+                      Passaporte (ID)
+                    </span>
+                    <strong className="text-white">
+                      {selectedSubmission.passport || selectedSubmission.phone}
+                    </strong>
                   </div>
                 </div>
 
                 <div className="space-y-3 pt-2">
-                  <h5 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Questões do Teste</h5>
+                  <h5 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Questões do Teste
+                  </h5>
                   {portalData.questions.map((q, idx) => {
                     const ans = selectedSubmission.answers[idx];
                     const correctAns = q.answerIndex;
                     const isCorrect = ans === correctAns;
 
                     return (
-                      <div key={q.id} className="bg-slate-950/40 border border-slate-800 p-3 rounded-lg space-y-2 text-xs">
+                      <div
+                        key={q.id}
+                        className="bg-slate-950/40 border border-slate-800 p-3 rounded-lg space-y-2 text-xs"
+                      >
                         <div className="flex justify-between items-center">
-                          <span className="font-mono text-[10px] text-slate-400">Questão {idx + 1}</span>
+                          <span className="font-mono text-[10px] text-slate-400">
+                            Questão {idx + 1}
+                          </span>
                           {isCorrect ? (
-                            <span className="text-emerald-400 font-bold font-mono text-[10px] uppercase flex items-center gap-1">✓ Correta</span>
+                            <span className="text-emerald-400 font-bold font-mono text-[10px] uppercase flex items-center gap-1">
+                              ✓ Correta
+                            </span>
                           ) : (
-                            <span className="text-red-400 font-bold font-mono text-[10px] uppercase flex items-center gap-1">✗ Incorreta</span>
+                            <span className="text-red-400 font-bold font-mono text-[10px] uppercase flex items-center gap-1">
+                              ✗ Incorreta
+                            </span>
                           )}
                         </div>
                         <p className="font-semibold text-slate-100">{q.question}</p>
                         <div className="space-y-1 text-slate-400 pl-2 border-l border-slate-800">
-                          <p><strong className="text-slate-500">Selecionada:</strong> {q.options[ans] || "Sem resposta"}</p>
+                          <p>
+                            <strong className="text-slate-500">Selecionada:</strong>{' '}
+                            {q.options[ans] || 'Sem resposta'}
+                          </p>
                           {!isCorrect && (
-                            <p><strong className="text-emerald-500">Correta:</strong> {q.options[correctAns]}</p>
+                            <p>
+                              <strong className="text-emerald-500">Correta:</strong>{' '}
+                              {q.options[correctAns]}
+                            </p>
                           )}
                         </div>
                       </div>

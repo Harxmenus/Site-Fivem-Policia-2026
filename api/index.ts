@@ -18,8 +18,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const PORT = Number(process.env.PORT) || 3000;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const DATA_FILE = path.join(process.cwd(), 'data.json');
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const TOKEN_FILE = path.join(process.cwd(), '.admin-token');
 
 app.use(express.json({ limit: '25mb' }));
@@ -470,7 +473,7 @@ async function getPortalData(): Promise<any> {
       await kv.set('portal_data', data);
       return data;
     }
-    
+
     // Migrations
     let updated = false;
     if (!data.history) {
@@ -549,7 +552,11 @@ async function savePortalData(data: any): Promise<boolean> {
 // Auth
 // ---------------------------------------------------------------------------
 
-const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const requireAdmin = async (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
   const authHeader = req.headers.authorization;
   const token = await getAdminToken();
   if (authHeader === `Bearer ${token}`) {
@@ -583,7 +590,11 @@ function resetLoginAttempts(ip: string) {
 
 // Verifies a login attempt against stored credentials, transparently
 // upgrading a legacy plain-text password to a salted hash on first success.
-async function verifyAdminCredentials(data: any, username: string, password: string): Promise<boolean> {
+async function verifyAdminCredentials(
+  data: any,
+  username: string,
+  password: string
+): Promise<boolean> {
   const creds = data.adminCredentials || DEFAULT_PORTAL_DATA.adminCredentials;
   if (username !== creds.username) return false;
 
@@ -614,11 +625,9 @@ app.get('/api/content', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const ip = req.ip || 'unknown';
   if (isLoginRateLimited(ip)) {
-    return res
-      .status(429)
-      .json({
-        error: 'Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.',
-      });
+    return res.status(429).json({
+      error: 'Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.',
+    });
   }
 
   const { username, password } = req.body || {};
@@ -720,10 +729,10 @@ app.post('/api/upload', requireAdmin, async (req, res) => {
     }
 
     const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${extension}`;
-    
+
     // Save to Vercel Blob
     const blob = await put(filename, buffer, { access: 'public' });
-    
+
     res.json({ success: true, url: blob.url });
   } catch (err: any) {
     console.error('Upload error:', err);
@@ -776,11 +785,9 @@ app.post('/api/submit-test', async (req, res) => {
   const questions = data.questions || DEFAULT_QUESTIONS;
 
   if (answers.length !== questions.length) {
-    return res
-      .status(400)
-      .json({
-        error: 'O número de respostas enviadas não corresponde ao número de questões do teste.',
-      });
+    return res.status(400).json({
+      error: 'O número de respostas enviadas não corresponde ao número de questões do teste.',
+    });
   }
 
   // Calculate score
@@ -877,11 +884,9 @@ app.post('/api/ai-suggest', async (req, res) => {
   }
 
   if (typeof originalText === 'string' && originalText.length > 8000) {
-    return res
-      .status(400)
-      .json({
-        error: 'O texto original excede o tamanho máximo permitido para processamento por IA.',
-      });
+    return res.status(400).json({
+      error: 'O texto original excede o tamanho máximo permitido para processamento por IA.',
+    });
   }
   if (typeof instructions === 'string' && instructions.length > 1000) {
     return res
@@ -909,11 +914,9 @@ Por favor, escreva um parágrafo polido, sem quebras de linha longas ou formata�
     res.json({ result: resultText });
   } catch (error: any) {
     console.error('Gemini AI API error:', error);
-    res
-      .status(500)
-      .json({
-        error: 'Erro ao se comunicar com a Inteligência Artificial do Gemini: ' + error.message,
-      });
+    res.status(500).json({
+      error: 'Erro ao se comunicar com a Inteligência Artificial do Gemini: ' + error.message,
+    });
   }
 });
 

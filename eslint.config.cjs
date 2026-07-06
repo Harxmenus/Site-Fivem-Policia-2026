@@ -1,13 +1,13 @@
-const js = require("@eslint/js");
-const tsParser = require("@typescript-eslint/parser");
-const tsPlugin = require("@typescript-eslint/eslint-plugin");
-const prettier = require("eslint-plugin-prettier/recommended");
-const reactPlugin = require("eslint-plugin-react");
+const js = require('@eslint/js');
+const tsParser = require('@typescript-eslint/parser');
+const tsPlugin = require('@typescript-eslint/eslint-plugin');
+const prettier = require('eslint-plugin-prettier/recommended');
+const reactPlugin = require('eslint-plugin-react');
 
 module.exports = [
   js.configs.recommended,
   {
-    files: ["**/*.{ts,tsx}"],
+    files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -15,7 +15,7 @@ module.exports = [
       },
     },
     plugins: {
-      "@typescript-eslint": tsPlugin,
+      '@typescript-eslint': tsPlugin,
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
@@ -23,14 +23,14 @@ module.exports = [
   },
   prettier,
   {
-    files: ["**/*.{js,jsx,ts,tsx}"],
+    files: ['**/*.{js,jsx,ts,tsx}'],
     plugins: {
       react: reactPlugin,
     },
     languageOptions: {
       globals: {
-        ...require("globals").browser,
-        ...require("globals").node,
+        ...require('globals').browser,
+        ...require('globals').node,
       },
       parserOptions: {
         ecmaFeatures: {
@@ -40,14 +40,14 @@ module.exports = [
     },
     settings: {
       react: {
-        version: "detect",
+        version: 'detect',
       },
     },
     rules: {
-      "react/react-in-jsx-scope": "off",
+      'react/react-in-jsx-scope': 'off',
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", "tailwind.config.cjs"],
+    ignores: ['dist/**', 'node_modules/**', 'tailwind.config.cjs'],
   },
 ];

@@ -30,9 +30,10 @@ const Header: React.FC<HeaderProps> = ({
       className={`
         relative px-1 py-1 text-[11px] font-bold tracking-wider uppercase transition-all duration-200
         hover:text-red-400
-        ${isActive(paths)
-          ? 'text-red-500 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-500 after:rounded-full'
-          : 'text-slate-400'
+        ${
+          isActive(paths)
+            ? 'text-red-500 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-500 after:rounded-full'
+            : 'text-slate-400'
         }
       `}
     >
@@ -44,9 +45,10 @@ const Header: React.FC<HeaderProps> = ({
     <button
       onClick={() => navigateTo(path)}
       className={`text-left px-4 py-3 rounded-xl flex items-center gap-2.5 transition-all text-xs font-bold tracking-wider uppercase
-        ${isActive(paths)
-          ? 'bg-red-950/20 text-red-400 border-l-4 border-red-500'
-          : 'text-slate-400 hover:bg-slate-900 hover:text-white'
+        ${
+          isActive(paths)
+            ? 'bg-red-950/20 text-red-400 border-l-4 border-red-500'
+            : 'text-slate-400 hover:bg-slate-900 hover:text-white'
         }`}
     >
       <span>{emoji}</span> {label}
@@ -56,7 +58,6 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/60 shadow-2xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
-
         {/* Logo */}
         <div
           className="flex items-center gap-3 cursor-pointer group shrink-0"
@@ -80,7 +81,9 @@ const Header: React.FC<HeaderProps> = ({
           {navBtn('/', ['/', '/inicio'], '🏠 Início')}
           {navBtn('/historia', ['/historia'], '📖 História')}
           {navBtn('/galeria', ['/galeria'], '🖼 Galeria')}
-          {navBtn('/processo-seletivo', ['/processo-seletivo'],
+          {navBtn(
+            '/processo-seletivo',
+            ['/processo-seletivo'],
             <span className="text-red-400">📝 Processo Seletivo</span>
           )}
           {navBtn('/admin', ['/admin'], '🔐 Admin')}
@@ -88,17 +91,17 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Right controls */}
         <div className="flex items-center gap-2 shrink-0">
-
           {/* Dark mode toggle */}
           <button
             onClick={toggleDarkMode}
             aria-label="Toggle dark mode"
             className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-600 transition-all hover:scale-105"
           >
-            {darkMode
-              ? <Sun size={15} className="text-amber-400" />
-              : <Moon size={15} className="text-slate-400" />
-            }
+            {darkMode ? (
+              <Sun size={15} className="text-amber-400" />
+            ) : (
+              <Moon size={15} className="text-slate-400" />
+            )}
           </button>
 
           {/* Social links – desktop */}

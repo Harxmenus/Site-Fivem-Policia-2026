@@ -7,12 +7,12 @@ export interface HistoryConfig {
   title: string;
   subtitle: string;
   content: string; // "Nossa História"
-  about: string;   // "Sobre o Grupo"
+  about: string; // "Sobre o Grupo"
   homenagemText: string;
   homenagemNames: string[];
   bannerUrl: string;
   mission?: string; // kept for backwards compatibility
-  values?: string;  // kept for backwards compatibility
+  values?: string; // kept for backwards compatibility
 }
 
 export interface TimelineEvent {
@@ -53,7 +53,7 @@ export interface SubmissionItem {
   discordTag: string;
   age: string;
   passport: string; // Changed from phone
-  phone?: string;   // Kept as optional for legacy compatibility
+  phone?: string; // Kept as optional for legacy compatibility
   answers: number[];
   score: number;
   timestamp: string;
