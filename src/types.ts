@@ -62,6 +62,8 @@ export interface SubmissionItem {
 
 export interface PortalData {
   discordWebhook: string;
+  discordUrl: string;
+  tiktokUrl: string;
   history: HistoryConfig;
   timeline: TimelineEvent[];
   statistics: StatisticItem[];

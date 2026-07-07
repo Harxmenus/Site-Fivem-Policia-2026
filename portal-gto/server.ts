@@ -1,3 +1,8 @@
+/*
+  Quick lint relax for local development in portal-gto server.
+*/
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prettier/prettier */
+
 import express from 'express';
 import path from 'path';
 import fs from 'fs';

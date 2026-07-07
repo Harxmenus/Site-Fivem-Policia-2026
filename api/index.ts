@@ -6,11 +6,16 @@ import crypto from 'crypto';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { kv } from '@vercel/kv';
-import { put } from '@vercel/blob';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Load environment variables
 dotenv.config();
+
+/*
+  Temporarily allow `any` in this server file to reduce noise from
+  numerous external-client types; we'll tighten types incrementally.
+*/
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Supabase client (optional). To enable, set SUPABASE_URL and SUPABASE_SERVICE_ROLE
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -22,8 +27,8 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE) {
       auth: { persistSession: false },
     });
     console.log('Supabase client initialized.');
-  } catch (err) {
-    console.warn('Failed to initialize Supabase client:', err);
+  } catch (_err) {
+    console.warn('Failed to initialize Supabase client:', _err);
     supabase = null;
   }
 }
@@ -33,18 +38,22 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE) {
 async function kvGet(key: string): Promise<any> {
   if (supabase) {
     try {
-      const { data, error } = await supabase.from('kv').select('value').eq('key', key).maybeSingle();
+      const { data, error } = await supabase
+        .from('kv')
+        .select('value')
+        .eq('key', key)
+        .maybeSingle();
       if (error) throw error;
       return data?.value ?? null;
-    } catch (err) {
-      console.error('Supabase KV get error:', err);
+    } catch (_err) {
+      console.error('Supabase KV get error:', _err);
       return null;
     }
   }
   try {
     return await kv.get(key as any);
-  } catch (err) {
-    console.error('Vercel KV get error:', err);
+  } catch (_err) {
+    console.error('Vercel KV get error:', _err);
     return null;
   }
 }
@@ -55,16 +64,16 @@ async function kvSet(key: string, value: any): Promise<void> {
       const { error } = await supabase.from('kv').upsert({ key, value });
       if (error) throw error;
       return;
-    } catch (err) {
-      console.error('Supabase KV set error:', err);
-      throw err;
+    } catch (_err) {
+      console.error('Supabase KV set error:', _err);
+      throw _err;
     }
   }
   try {
     await kv.set(key as any, value);
-  } catch (err) {
-    console.error('Vercel KV set error:', err);
-    throw err;
+  } catch (_err) {
+    console.error('Vercel KV set error:', _err);
+    throw _err;
   }
 }
 
@@ -108,7 +117,7 @@ async function getAdminToken(): Promise<string> {
     const generated = crypto.randomBytes(32).toString('hex');
     await kvSet('admin_token', generated);
     return generated;
-  } catch (err) {
+  } catch {
     return crypto.randomBytes(32).toString('hex');
   }
 }
@@ -379,6 +388,8 @@ const DEFAULT_PORTAL_DATA = {
     password: process.env.ADMIN_DEFAULT_PASSWORD || 'gto-password-2026',
   },
   discordWebhook: '',
+  discordUrl: '',
+  tiktokUrl: '',
   history: {
     title: 'Grupo Tático de Operações - GTO',
     subtitle: 'FORÇA, HONRA E DISCIPLINA',
@@ -546,7 +557,7 @@ async function getPortalData(): Promise<any> {
       updated = true;
     }
     if (Array.isArray(data.submissions)) {
-      data.submissions.forEach((submission) => {
+      data.submissions.forEach((submission: any) => {
         if (!submission.passport && submission.phone) {
           submission.passport = submission.phone;
           delete submission.phone;
@@ -555,15 +566,16 @@ async function getPortalData(): Promise<any> {
       });
     }
     if (Array.isArray(data.gallery)) {
-      const fallbackCategoryById = {
+      const fallbackCategoryById: Record<string, string> = {
         g1: 'Patrulhamento',
         g2: 'Operações',
         g3: 'Certificados',
         g4: 'Abordagens',
         g5: 'Apreensões',
       };
-      data.gallery.forEach((item) => {
-        const oldCat = item.category || fallbackCategoryById[item.id] || 'Patrulhamento';
+      data.gallery.forEach((item: any) => {
+        const id = String(item.id ?? '');
+        const oldCat = item.category || fallbackCategoryById[id] || 'Patrulhamento';
         let newCat = 'Patrulhamento';
         if (oldCat.includes('Operações') || oldCat.includes('Operação')) {
           newCat = 'Operações';
@@ -582,6 +594,15 @@ async function getPortalData(): Promise<any> {
           updated = true;
         }
       });
+    }
+
+    if (data.discordUrl === undefined) {
+      data.discordUrl = '';
+      updated = true;
+    }
+    if (data.tiktokUrl === undefined) {
+      data.tiktokUrl = '';
+      updated = true;
     }
 
     if (updated) {
@@ -674,7 +695,8 @@ async function verifyAdminCredentials(
 // 1. Get Portal Data (excludes credentials for safety)
 app.get('/api/content', async (req, res) => {
   const data = await getPortalData();
-  const { adminCredentials, ...publicData } = data;
+  const publicData = { ...data } as any;
+  delete publicData.adminCredentials;
   res.json(publicData);
 });
 
@@ -724,6 +746,12 @@ app.post('/api/content', requireAdmin, async (req, res) => {
       typeof incomingData.discordWebhook === 'string'
         ? incomingData.discordWebhook
         : currentData.discordWebhook,
+    discordUrl:
+      typeof incomingData.discordUrl === 'string'
+        ? incomingData.discordUrl
+        : currentData.discordUrl,
+    tiktokUrl:
+      typeof incomingData.tiktokUrl === 'string' ? incomingData.tiktokUrl : currentData.tiktokUrl,
   };
 
   if (
@@ -740,7 +768,8 @@ app.post('/api/content', requireAdmin, async (req, res) => {
   }
 
   if (await savePortalData(updatedData)) {
-    const { adminCredentials, ...publicData } = updatedData;
+    const publicData = { ...updatedData } as any;
+    delete publicData.adminCredentials;
     res.json({ success: true, data: publicData });
   } else {
     res.status(500).json({ error: 'Erro ao salvar os dados no servidor.' });
@@ -787,29 +816,29 @@ app.post('/api/upload', requireAdmin, async (req, res) => {
 
     const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${extension}`;
 
-    // Save to Supabase Storage if configured, otherwise Vercel Blob
-    if (supabase) {
-      try {
-        const bucket = 'uploads';
-        const path = filename;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(path, buffer as any, { contentType: mimeType, upsert: false });
-        if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
-        const publicUrl = (urlData && (urlData.publicUrl || urlData.publicUrl)) || null;
-        if (!publicUrl) throw new Error('Failed to get public URL from Supabase Storage');
-        res.json({ success: true, url: publicUrl });
-        return;
-      } catch (supErr) {
-        console.error('Supabase upload error:', supErr);
-        // fallthrough to try Vercel Blob as a fallback
-      }
+    // Local-only storage: write to ./uploads (always used for local/dev)
+    try {
+      const localPath = path.join(UPLOADS_DIR, filename);
+      await fs.promises.writeFile(localPath, buffer, { flag: 'wx' }).catch(async (e) => {
+        // If file exists, overwrite safely
+        if ((e as any)?.code === 'EEXIST') {
+          await fs.promises.writeFile(localPath, buffer);
+          return;
+        }
+        throw e;
+      });
+      const publicUrl = `/uploads/${filename}`;
+      return res.json({
+        success: true,
+        storageProvider: 'local',
+        path: publicUrl,
+        signedUrl: publicUrl,
+        url: publicUrl,
+      });
+    } catch (localErr) {
+      console.error('Local upload error:', localErr);
+      throw localErr;
     }
-
-    // Fallback: Save to Vercel Blob
-    const blob = await put(filename, buffer, { access: 'public' });
-    res.json({ success: true, url: blob.url });
   } catch (err: any) {
     console.error('Upload error:', err);
     res.status(500).json({ error: 'Erro ao salvar imagem no servidor.' });

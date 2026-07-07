@@ -5,7 +5,6 @@ import {
   User,
   MessageSquare,
   Calendar,
-  Phone,
   ChevronRight,
   AlertTriangle,
   CheckCircle,

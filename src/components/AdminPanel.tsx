@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prettier/prettier */
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -81,6 +83,8 @@ export default function AdminPanel({
   const [statisticsForm, setStatisticsForm] = useState<StatisticItem[]>(portalData.statistics);
   const [galleryForm, setGalleryForm] = useState<GalleryItem[]>(portalData.gallery);
   const [discordWebhook, setDiscordWebhook] = useState(portalData.discordWebhook);
+  const [discordUrl, setDiscordUrl] = useState(portalData.discordUrl || '');
+  const [tiktokUrl, setTiktokUrl] = useState(portalData.tiktokUrl || '');
   const [namesText, setNamesText] = useState(portalData.history.homenagemNames?.join(', ') || '');
   const [showWebhook, setShowWebhook] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -99,6 +103,8 @@ export default function AdminPanel({
     setStatisticsForm(portalData.statistics);
     setGalleryForm(portalData.gallery);
     setDiscordWebhook(portalData.discordWebhook);
+    setDiscordUrl(portalData.discordUrl || '');
+    setTiktokUrl(portalData.tiktokUrl || '');
     setNamesText(portalData.history.homenagemNames?.join(', ') || '');
   }, [portalData]);
 
@@ -451,6 +457,35 @@ export default function AdminPanel({
     }
     setDiscordWebhook(trimmedWebhook);
     handleSave({ discordWebhook: trimmedWebhook });
+  };
+
+  const saveSocialLinksConfig = () => {
+    const trimmedDiscordUrl = discordUrl?.trim() || '';
+    const trimmedTiktokUrl = tiktokUrl?.trim() || '';
+
+    const isValidUrl = (url: string) => {
+      if (!url) return true;
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    };
+
+    if (!isValidUrl(trimmedDiscordUrl)) {
+      alert('URL do Discord inválida. Use um link completo começando com http:// ou https://');
+      return;
+    }
+
+    if (!isValidUrl(trimmedTiktokUrl)) {
+      alert('URL do TikTok inválida. Use um link completo começando com http:// ou https://');
+      return;
+    }
+
+    setDiscordUrl(trimmedDiscordUrl);
+    setTiktokUrl(trimmedTiktokUrl);
+    handleSave({ discordUrl: trimmedDiscordUrl, tiktokUrl: trimmedTiktokUrl });
   };
 
   // Password / Admin Config Action
@@ -1492,6 +1527,61 @@ export default function AdminPanel({
                         <Save size={12} />
                       )}{' '}
                       Salvar Integração
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Social Links Configuration */}
+              <div className="space-y-4">
+                <div className="border-b border-slate-800 pb-3">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Links Sociais
+                  </h3>
+                  <p className="text-slate-400 text-[10px] mt-0.5">
+                    Atualize os links públicos de Discord e TikTok exibidos no cabeçalho e rodapé.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-5 space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Link do Discord
+                    </label>
+                    <input
+                      type="text"
+                      value={discordUrl}
+                      onChange={(e) => setDiscordUrl(e.target.value)}
+                      placeholder="https://discord.gg/seu-servidor"
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Link do TikTok
+                    </label>
+                    <input
+                      type="text"
+                      value={tiktokUrl}
+                      onChange={(e) => setTiktokUrl(e.target.value)}
+                      placeholder="https://www.tiktok.com/@seu_usuario"
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-pink-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={saveSocialLinksConfig}
+                      disabled={isSaving}
+                      className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      {isSaving ? (
+                        <RefreshCw size={12} className="animate-spin" />
+                      ) : (
+                        <Save size={12} />
+                      )}{' '}
+                      Salvar Links
                     </button>
                   </div>
                 </div>

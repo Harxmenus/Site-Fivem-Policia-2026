@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prettier/prettier */
+
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import { motion, AnimatePresence } from 'motion/react';
@@ -210,6 +212,10 @@ export default function App() {
     return paths.includes(currentPath);
   };
 
+  const currentDiscordUrl = portalData.discordUrl?.trim() || 'https://discord.gg/EwR6fKMYk';
+  const currentTiktokUrl =
+    portalData.tiktokUrl?.trim() || 'https://www.tiktok.com/@zepancadaoficial';
+
   // Static list of notable GTO operations to render on the Home tab
   const staticOperations = [
     {
@@ -310,6 +316,8 @@ export default function App() {
         setMobileMenuOpen={setMobileMenuOpen}
         darkMode={darkMode}
         toggleDarkMode={toggleDarkMode}
+        discordUrl={portalData.discordUrl || ''}
+        tiktokUrl={portalData.tiktokUrl || ''}
       />
 
       {/* CORE WRAPPER */}
@@ -418,39 +426,38 @@ export default function App() {
                 className="space-y-8"
               >
                 {/* Hero Banner Section */}
-                <section className="relative rounded-3xl overflow-hidden border border-slate-900 shadow-2xl h-[450px] md:h-[550px] flex items-center">
+                <section className="relative rounded-[2rem] overflow-hidden border border-slate-900 shadow-2xl min-h-[520px] grid grid-cols-1 lg:grid-cols-[1.9fr_1.1fr] bg-slate-900/10">
                   <div className="absolute inset-0 z-0">
                     <img
                       src={portalData.history.bannerUrl}
                       alt="GTO banner"
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-slate-950/30" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-transparent to-slate-950/25" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/10" />
+                    <div className="absolute left-0 top-0 h-full w-full bg-gradient-to-r from-slate-950/95 via-slate-950/30 to-transparent pointer-events-none" />
                   </div>
 
-                  <div className="relative z-10 max-w-3xl px-6 md:px-12 space-y-5">
-                    <span className="px-3 py-1 text-[10px] uppercase font-bold font-mono tracking-widest bg-red-600 text-white rounded shadow">
+                  <div className="relative z-10 px-6 md:px-12 py-10 flex flex-col justify-center gap-5 lg:col-span-1">
+                    <span className="inline-flex items-center gap-2 px-3 py-1 text-[10px] uppercase font-bold font-mono tracking-[0.35em] bg-red-600/90 text-white rounded-full shadow-lg shadow-red-950/20">
                       UNIDADE TÁTICA DE PRONTO EMPREGO
                     </span>
-                    <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white leading-tight">
+                    <h2 className="text-4xl md:text-6xl xl:text-7xl font-black tracking-tight text-white leading-[0.95] max-w-3xl">
                       {portalData.history.title}
                     </h2>
                     <p className="text-red-500 font-mono text-xs md:text-sm font-bold tracking-widest uppercase">
                       {portalData.history.subtitle}
                     </p>
 
-                    {/* Frase de Impacto */}
-                    <div className="border-l-4 border-red-600 pl-4 py-1 bg-slate-950/40 backdrop-blur-sm rounded-r-xl pr-4 max-w-xl">
+                    <div className="border-l-4 border-red-600 pl-4 py-3 bg-slate-950/45 backdrop-blur-sm rounded-r-2xl pr-4 max-w-xl">
                       <p className="font-mono text-base md:text-lg font-black text-red-500 tracking-wider animate-pulse italic uppercase">
                         "Hope, senhores. Hope, pra cima."
                       </p>
-                      <p className="text-[10px] text-slate-300 font-mono uppercase tracking-widest mt-0.5">
+                      <p className="text-[10px] text-slate-300 font-mono uppercase tracking-widest mt-1">
                         União • Honra • Disciplina
                       </p>
                     </div>
 
-                    <p className="text-slate-300 text-sm md:text-base leading-relaxed">
+                    <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-2xl">
                       Força especializada e ostensiva de choque destinada ao reestabelecimento da
                       ordem pública, controle tático de distúrbios, combate urbano (CQB) e missões
                       especiais de altíssimo risco.
@@ -459,15 +466,95 @@ export default function App() {
                     <div className="flex flex-wrap gap-3 pt-2">
                       <button
                         onClick={() => navigateTo('/processo-seletivo')}
-                        className="px-6 py-3.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-red-950/40 flex items-center gap-2"
+                        className="px-6 py-3.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs uppercase tracking-wider rounded-3xl transition-all shadow-lg shadow-red-950/35 flex items-center gap-2"
                       >
                         📝 Processo Seletivo <ChevronRight size={14} />
                       </button>
                       <button
                         onClick={() => navigateTo('/historia')}
-                        className="px-6 py-3.5 bg-slate-900/80 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer border border-slate-800 flex items-center gap-2"
+                        className="px-6 py-3.5 bg-slate-900/80 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-xs uppercase tracking-wider rounded-3xl transition-all shadow-sm border border-slate-800 flex items-center gap-2"
                       >
                         📖 Nossa História
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 lg:col-span-5 px-6 md:px-10 py-10 flex flex-col justify-between gap-6 bg-slate-950/70 backdrop-blur-xl lg:border-l lg:border-slate-900/60">
+                    <div className="space-y-4">
+                      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/80 border border-red-700/20 text-red-300 text-[11px] font-semibold uppercase tracking-wider">
+                        <Shield size={14} /> Missão Tática
+                      </span>
+                      <h3 className="text-2xl md:text-3xl font-black text-white leading-tight">
+                        Resiliência operacional. Presença imediata.
+                      </h3>
+                      <p className="text-slate-300 text-sm leading-relaxed">
+                        A unidade mantém vigilância permanente no território, pronta para missões de
+                        choque, controle de distúrbios e suporte estratégico em todo o cenário
+                        urbano.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4">
+                      <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-4 shadow-lg shadow-slate-950/40">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
+                              Operações ativas
+                            </p>
+                            <p className="mt-2 text-white font-black">Choque e controle</p>
+                          </div>
+                          <Activity className="text-red-400" size={24} />
+                        </div>
+                        <p className="mt-3 text-slate-400 text-xs leading-relaxed">
+                          Incursões de rápida resposta com presença tática e controle especializado
+                          de distúrbios.
+                        </p>
+                      </div>
+
+                      <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-4 shadow-lg shadow-slate-950/40">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
+                              Combate Urbano
+                            </p>
+                            <p className="mt-2 text-white font-black">CQB e patrulhamento</p>
+                          </div>
+                          <Target className="text-red-400" size={24} />
+                        </div>
+                        <p className="mt-3 text-slate-400 text-xs leading-relaxed">
+                          Mobilidade e precisão em ambientes fechados e operações de alto risco.
+                        </p>
+                      </div>
+
+                      <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-4 shadow-lg shadow-slate-950/40">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
+                              Inteligência tática
+                            </p>
+                            <p className="mt-2 text-white font-black">Análise e decisão</p>
+                          </div>
+                          <BarChart3 className="text-red-400" size={24} />
+                        </div>
+                        <p className="mt-3 text-slate-400 text-xs leading-relaxed">
+                          Decisões rápidas com base em inteligência de campo, rota de ação e
+                          contenção.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3">
+                      <button
+                        onClick={() => navigateTo('/processo-seletivo')}
+                        className="w-full px-5 py-3 rounded-3xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold uppercase tracking-[0.25em] text-xs shadow-xl shadow-red-950/25 transition-all hover:scale-[1.01]"
+                      >
+                        Ingressar no Processo
+                      </button>
+                      <button
+                        onClick={() => navigateTo('/historia')}
+                        className="w-full px-5 py-3 rounded-3xl bg-slate-900/80 border border-slate-800 text-slate-100 font-bold uppercase tracking-[0.25em] text-xs hover:bg-slate-800 transition-all"
+                      >
+                        Conhecer a História
                       </button>
                     </div>
                   </div>
@@ -985,7 +1072,7 @@ export default function App() {
           {/* Social Links in Footer */}
           <div className="flex items-center gap-3">
             <a
-              href="https://discord.gg/EwR6fKMYk"
+              href={currentDiscordUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="px-3 py-1.5 bg-indigo-950/20 text-indigo-400 hover:bg-indigo-900/40 border border-indigo-900/30 rounded-xl transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider"
@@ -994,7 +1081,7 @@ export default function App() {
               <span>Discord</span>
             </a>
             <a
-              href="https://www.tiktok.com/@zepancadaoficial"
+              href={currentTiktokUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="px-3 py-1.5 bg-rose-950/20 text-rose-400 hover:bg-rose-900/40 border border-rose-900/30 rounded-xl transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider"

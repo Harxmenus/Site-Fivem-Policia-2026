@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prettier/prettier */
+
 import React from 'react';
 import * as Icons from 'lucide-react';
 

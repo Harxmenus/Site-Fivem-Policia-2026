@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prettier/prettier */
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {

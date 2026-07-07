@@ -10,7 +10,7 @@ interface IconRendererProps {
 
 export default function IconRenderer({ name, className = '', size = 24 }: IconRendererProps) {
   // Safe lookup in Lucide icons
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const LucideIcon = (Icons as any)[name];
 
   if (!LucideIcon) {
