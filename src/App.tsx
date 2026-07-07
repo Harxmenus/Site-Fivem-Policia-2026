@@ -108,10 +108,33 @@ export default function App() {
   useEffect(() => {
     fetchPortalData();
 
-    // Check if token already exists in session/local storage
+    // Restore admin session — but validate the stored token first.
+    // If the server was restarted (new token) the old token becomes invalid;
+    // detecting this here prevents "sessão expirada" errors mid-use (e.g. banner URL save).
     const storedToken = localStorage.getItem('gto_admin_token');
     if (storedToken) {
-      setAdminToken(storedToken);
+      // Quick validation: POST /api/content with only the token — a 401 means it's stale.
+      fetch('/api/content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${storedToken}`,
+        },
+        // Send empty body — the endpoint will merge it with current data, no harm done.
+        body: JSON.stringify({}),
+      }).then((res) => {
+        if (res.ok || res.status !== 401) {
+          // Token is still valid — restore the session.
+          setAdminToken(storedToken);
+        } else {
+          // Token was rejected (server restarted / old fake token) — clear it.
+          localStorage.removeItem('gto_admin_token');
+        }
+      }).catch(() => {
+        // Network error during validation — restore optimistically (the request will fail
+        // visibly if the token is actually invalid).
+        setAdminToken(storedToken);
+      });
     }
 
     // Set page path based on initial load
