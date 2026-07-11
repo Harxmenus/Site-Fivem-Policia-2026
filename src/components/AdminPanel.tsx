@@ -111,57 +111,6 @@ export default function AdminPanel({
     setNamesText(portalData.history.homenagemNames?.join(', ') || '');
   }, [portalData]);
 
-  // Image Upload Handler
-  const handleImageUpload = async (file: File, onSuccess: (url: string) => void) => {
-    if (!file) return;
-
-    if (file.size > 25 * 1024 * 1024) {
-      alert('A imagem selecionada é muito grande. O limite máximo é 25MB.');
-      return;
-    }
-
-    try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64String = reader.result as string;
-        try {
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              name: file.name,
-              type: file.type,
-              base64: base64String,
-            }),
-          });
-
-          if (!response.ok) {
-            if (response.status === 401) {
-              alert('Sua sessão expirou ou não é válida. Faça login novamente.');
-              onLogout();
-              return;
-            }
-            const errData = await response.json();
-            throw new Error(errData.error || 'Erro no upload.');
-          }
-
-          const data = await response.json();
-          onSuccess(data.url);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (err: any) {
-          alert('Erro ao fazer upload: ' + err.message);
-        }
-      };
-      reader.readAsDataURL(file);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      alert('Erro ao ler arquivo: ' + err.message);
-    }
-  };
-
   const isValidImageUrl = (urlStr: string) => {
     if (!urlStr) return false;
     const cleanUrl = urlStr.trim();
