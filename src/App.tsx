@@ -649,11 +649,12 @@ export default function App() {
                           <IconRenderer name={item.badgeIcon || 'Shield'} size={12} />
                         </div>
 
-                        <div className="aspect-[4/3] overflow-hidden bg-slate-950 relative flex items-center justify-center">
+                        <div className="aspect-[4/3] overflow-hidden bg-slate-950 relative">
                           <ImageWithFallback
                             src={item.url}
                             alt={item.caption}
-                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                            wrapperClassName="w-full h-full"
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                             <span className="text-[10px] font-mono text-red-400 font-bold bg-slate-950/90 border border-red-900/40 px-2.5 py-1 rounded">
@@ -857,11 +858,12 @@ export default function App() {
                                 <IconRenderer name={item.badgeIcon || 'Shield'} size={12} />
                               </div>
 
-                              <div className="aspect-[4/3] overflow-hidden bg-slate-950 relative flex items-center justify-center">
+                              <div className="aspect-[4/3] overflow-hidden bg-slate-950 relative">
                                 <ImageWithFallback
                                   src={item.url}
                                   alt={item.caption}
-                                  className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                                  wrapperClassName="w-full h-full"
+                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                                   <span className="text-[10px] font-mono text-red-400 font-bold bg-slate-950/95 border border-red-900/40 px-2.5 py-1 rounded">
