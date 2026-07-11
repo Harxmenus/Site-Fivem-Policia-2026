@@ -499,8 +499,8 @@ function writeLocalData(data: any): boolean {
   }
 }
 
-// Simple in-memory cache so we don't download the blob on every request
-let blobDataCache: { data: any; etag?: string } | null = null;
+// We do not use an in-memory cache for blob data because serverless instances
+// do not share memory. Using a local cache causes stale data for users.
 
 async function readBlobData(): Promise<any | null> {
   try {
@@ -530,8 +530,6 @@ async function writeBlobData(data: any): Promise<boolean> {
       allowOverwrite: true,
       token,
     });
-    // Invalidate cache
-    blobDataCache = { data };
     return true;
   } catch (err: any) {
     console.error('Error writing blob data:', err?.message, err?.cause?.message, JSON.stringify(err));
@@ -597,8 +595,6 @@ async function getPortalData(): Promise<any> {
 
   // ── Production: Vercel Blob ────────────────────────────────────────────────
   try {
-    // Use cache when available
-    if (blobDataCache) return blobDataCache.data;
 
     let data = await readBlobData();
     if (!data) {
@@ -609,7 +605,6 @@ async function getPortalData(): Promise<any> {
 
     const { data: migrated, updated } = await applyMigrations(data);
     if (updated) await writeBlobData(migrated);
-    blobDataCache = { data: migrated };
     return migrated;
   } catch (error) {
     console.error('Error reading portal data, returning default fallback:', error);
@@ -624,7 +619,6 @@ async function savePortalData(data: any): Promise<boolean> {
   }
 
   // ── Production: Vercel Blob ────────────────────────────────────────────────
-  blobDataCache = null; // Invalidate cache on write
   return writeBlobData(data);
 }
 
