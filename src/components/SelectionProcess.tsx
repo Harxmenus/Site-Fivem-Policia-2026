@@ -1,13 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prettier/prettier */
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   FileText,
   User,
   MessageSquare,
   Calendar,
-  Phone,
   ChevronRight,
   AlertTriangle,
   CheckCircle,

@@ -1,0 +1,48 @@
+import React, { useState } from 'react';
+
+const FALLBACK_URL = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">' +
+  '<rect fill="#0f172a" width="800" height="450"/>' +
+  '<text fill="#334155" font-family="monospace" font-size="16" text-anchor="middle" x="400" y="225">Imagem indisponível</text>' +
+  '</svg>'
+);
+
+interface ImageWithFallbackProps {
+  src: string;
+  alt: string;
+  className?: string;
+  wrapperClassName?: string;
+  aspectRatio?: string;
+  loading?: 'lazy' | 'eager';
+}
+
+export default function ImageWithFallback({
+  src,
+  alt,
+  className = '',
+  wrapperClassName = '',
+  aspectRatio = 'auto',
+  loading = 'lazy',
+}: ImageWithFallbackProps) {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
+
+  const handleError = () => {
+    if (!hasError) {
+      setHasError(true);
+      setImgSrc(FALLBACK_URL);
+    }
+  };
+
+  return (
+    <div className={`overflow-hidden ${wrapperClassName}`} style={{ aspectRatio }}>
+      <img
+        src={imgSrc}
+        alt={alt}
+        loading={loading}
+        onError={handleError}
+        className={className}
+      />
+    </div>
+  );
+}

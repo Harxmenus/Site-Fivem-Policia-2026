@@ -1,13 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prettier/prettier */
-
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Shield,
   History,
-  Calendar,
   BarChart3,
   Image as ImageIcon,
   Users,
@@ -22,20 +18,17 @@ import {
   Target,
   AlertCircle,
   RefreshCw,
-  Sparkles,
-  Phone,
   MessageSquare,
   Menu,
   X,
-  ArrowRight,
   Activity,
   Folder,
   Star,
-  Zap,
 } from 'lucide-react';
 
 import { PortalData } from './types';
 import IconRenderer from './components/IconRenderer';
+import ImageWithFallback from './components/ImageWithFallback';
 import SelectionProcess from './components/SelectionProcess';
 import AdminPanel from './components/AdminPanel';
 
@@ -449,12 +442,13 @@ export default function App() {
                 className="space-y-8"
               >
                 {/* Hero Banner Section */}
-                <section className="relative rounded-[2rem] overflow-hidden border border-slate-900 shadow-2xl min-h-[520px] grid grid-cols-1 lg:grid-cols-[1.9fr_1.1fr] bg-slate-900/10">
+                <section className="relative rounded-[2rem] overflow-hidden border border-slate-900 shadow-2xl min-h-[600px] lg:min-h-[650px] grid grid-cols-1 lg:grid-cols-[1.9fr_1.1fr] bg-slate-900/10">
                   <div className="absolute inset-0 z-0">
-                    <img
+                    <ImageWithFallback
                       src={portalData.history.bannerUrl}
                       alt="GTO banner"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-center"
+                      wrapperClassName="absolute inset-0"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/10" />
                     <div className="absolute left-0 top-0 h-full w-full bg-gradient-to-r from-slate-950/95 via-slate-950/30 to-transparent pointer-events-none" />
@@ -688,10 +682,10 @@ export default function App() {
                       transition={{ duration: 0.2 }}
                       className="relative group rounded-3xl overflow-hidden border border-slate-900 shadow-xl aspect-video md:aspect-auto md:h-[220px]"
                     >
-                      <img
+                      <ImageWithFallback
                         src={portalData.history.bannerUrl}
                         alt="GTO Operator"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
                       <div className="absolute bottom-4 left-5 right-5">
@@ -735,8 +729,8 @@ export default function App() {
                           <IconRenderer name={item.badgeIcon || 'Shield'} size={12} />
                         </div>
 
-                        <div className="aspect-video overflow-hidden bg-slate-950 relative">
-                          <img
+                        <div className="aspect-[4/3] overflow-hidden bg-slate-950 relative">
+                          <ImageWithFallback
                             src={item.url}
                             alt={item.caption}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -956,12 +950,11 @@ export default function App() {
                                   <IconRenderer name={item.badgeIcon || 'Shield'} size={12} />
                                 </div>
 
-                                <div className="aspect-video overflow-hidden bg-slate-950 relative">
-                                  <img
+                                <div className="aspect-[4/3] overflow-hidden bg-slate-950 relative">
+                                  <ImageWithFallback
                                     src={item.url}
                                     alt={item.caption}
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                    referrerPolicy="no-referrer"
                                   />
                                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                                     <span className="text-[10px] font-mono text-red-400 font-bold bg-slate-950/95 border border-red-900/40 px-2.5 py-1 rounded">
@@ -1138,10 +1131,11 @@ export default function App() {
               className="max-w-4xl max-h-[80vh] flex flex-col items-center justify-center relative rounded-xl overflow-hidden border border-slate-900 shadow-2xl bg-slate-950"
               onClick={(e) => e.stopPropagation()}
             >
-              <img
+              <ImageWithFallback
                 src={lightboxImg.url}
                 alt="Lightbox view"
                 className="max-w-full max-h-[70vh] object-contain"
+                wrapperClassName="flex items-center justify-center"
               />
               <div className="p-5 bg-slate-950 border-t border-slate-900 w-full text-center space-y-1.5">
                 <p className="text-sm text-white font-bold uppercase tracking-wide">

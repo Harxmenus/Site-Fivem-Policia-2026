@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prettier/prettier */
-
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Eye,
@@ -37,6 +35,7 @@ import {
   Siren,
 } from 'lucide-react';
 import { PortalData, TimelineEvent, StatisticItem, GalleryItem, QuestionItem } from '../types';
+import ImageWithFallback from './ImageWithFallback';
 
 interface AdminPanelProps {
   onLogout: () => void;
@@ -799,45 +798,54 @@ export default function AdminPanel({
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    URL do Banner Principal
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="bannerUrl"
-                      value={historyForm.bannerUrl}
-                      onChange={handleHistoryChange}
-                      className="flex-1 bg-slate-950 border border-slate-800 focus:border-red-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none transition-all font-mono"
-                    />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      id="upload-banner-input"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          handleImageUpload(file, (uploadedUrl) => {
-                            setHistoryForm((prev) => {
-                              const updated = { ...prev, bannerUrl: uploadedUrl };
-                              handleSave({ history: updated }); // Auto-save history banner
-                              return updated;
-                            });
-                          });
-                        }
-                        e.target.value = '';
-                      }}
-                    />
-                    <label
-                      htmlFor="upload-banner-input"
-                      className="px-4 py-2.5 bg-slate-950 border border-slate-800 hover:border-slate-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
-                    >
-                      <Plus size={14} /> Upload Imagem
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      URL do Banner Principal
                     </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="bannerUrl"
+                        value={historyForm.bannerUrl}
+                        onChange={handleHistoryChange}
+                        className="flex-1 bg-slate-950 border border-slate-800 focus:border-red-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none transition-all font-mono"
+                      />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id="upload-banner-input"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageUpload(file, (uploadedUrl) => {
+                              setHistoryForm((prev) => {
+                                const updated = { ...prev, bannerUrl: uploadedUrl };
+                                handleSave({ history: updated });
+                                return updated;
+                              });
+                            });
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                      <label
+                        htmlFor="upload-banner-input"
+                        className="px-4 py-2.5 bg-slate-950 border border-slate-800 hover:border-slate-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        <Plus size={14} /> Upload Imagem
+                      </label>
+                    </div>
+                    {historyForm.bannerUrl && (
+                      <div className="mt-2 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video max-h-[200px]">
+                        <ImageWithFallback
+                          src={historyForm.bannerUrl}
+                          alt="Preview do banner"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
                   </div>
-                </div>
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
@@ -1229,15 +1237,11 @@ export default function AdminPanel({
                         </div>
                       </div>
 
-                      <div className="aspect-video w-full rounded-lg overflow-hidden bg-slate-900 border border-slate-800 relative">
-                        <img
+                      <div className="aspect-[4/3] w-full rounded-lg overflow-hidden bg-slate-900 border border-slate-800 relative">
+                        <ImageWithFallback
                           src={item.url}
                           alt="preview"
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              'https://images.unsplash.com/photo-1590418606746-018840f9cd0f?q=80&w=300&auto=format&fit=crop';
-                          }}
                         />
                       </div>
 

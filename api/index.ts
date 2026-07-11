@@ -28,10 +28,14 @@ app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
 // Ensure uploads directory exists and is served statically
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+  app.use('/uploads', express.static(UPLOADS_DIR));
+} catch {
+  // Serverless environment (Vercel) — uploads handled via Blob
 }
-app.use('/uploads', express.static(UPLOADS_DIR));
 
 // ---------------------------------------------------------------------------
 // Admin session token
@@ -509,19 +513,49 @@ type BlobReadResult =
   | { status: 'not_found' }
   | { status: 'error'; err: unknown };
 
+// Store the latest written data in memory to avoid Blob read-after-write
+// eventual-consistency issues within the same serverless instance.
+let cachedPortalData: any = null;
+
+function getBlobBaseUrl(token: string): string | null {
+  // Token format: BLOB_READ_WRITE_TOKEN = "{storeId}_{secret}"
+  const storeId = token.split('_')[0];
+  if (!storeId || storeId.length < 8) return null;
+  return `https://${storeId}.public.blob.vercel-storage.com`;
+}
+
 async function readBlobData(): Promise<BlobReadResult> {
   try {
     const token = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+    // Check in-memory cache first (same instance, just-after-write)
+    if (cachedPortalData !== null) {
+      return { status: 'ok', data: cachedPortalData };
+    }
+
+    const baseUrl = token ? getBlobBaseUrl(token) : null;
+    if (baseUrl) {
+      const url = `${baseUrl}/${BLOB_DATA_FILENAME}?t=${Date.now()}`;
+      const response = await fetch(url, {
+        headers: { 'Cache-Control': 'no-cache, no-store' },
+      });
+      if (response.status === 404) return { status: 'not_found' };
+      if (!response.ok) return { status: 'error', err: new Error(`HTTP ${response.status}`) };
+      const data = await response.json();
+      cachedPortalData = data;
+      return { status: 'ok', data };
+    }
+
+    // Fallback: list blobs (slower, may have eventual consistency)
     const { blobs } = await list({ prefix: BLOB_DATA_FILENAME, token });
     const match = blobs.find((b) => b.pathname === BLOB_DATA_FILENAME);
     if (!match) return { status: 'not_found' };
-    // Cache-busting: prevent Vercel CDN from serving a stale version
     const bustUrl = `${match.url}?t=${Date.now()}`;
     const response = await fetch(bustUrl, {
       headers: { 'Cache-Control': 'no-cache, no-store' },
     });
     if (!response.ok) return { status: 'error', err: new Error(`HTTP ${response.status}`) };
     const data = await response.json();
+    cachedPortalData = data;
     return { status: 'ok', data };
   } catch (err) {
     console.error('Error reading blob data:', err);
@@ -535,7 +569,7 @@ async function writeBlobData(data: any): Promise<boolean> {
     const buffer = Buffer.from(json, 'utf-8');
     const token = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
     console.log('[BLOB] token present:', !!token, 'token prefix:', token?.substring(0, 15));
-    await put(BLOB_DATA_FILENAME, buffer, {
+    const result = await put(BLOB_DATA_FILENAME, buffer, {
       access: 'public',
       contentType: 'application/json',
       addRandomSuffix: false,
@@ -543,6 +577,8 @@ async function writeBlobData(data: any): Promise<boolean> {
       cacheControlMaxAge: 0, // Prevent CDN from caching — always return fresh data
       token,
     });
+    // Update in-memory cache so subsequent reads on this instance are instantly consistent
+    cachedPortalData = data;
     return true;
   } catch (err: any) {
     console.error('Error writing blob data:', err?.message, err?.cause?.message, JSON.stringify(err));
@@ -614,7 +650,14 @@ async function getPortalData(): Promise<any> {
   const result = await readBlobData();
 
   if (result.status === 'not_found') {
-    // First run: blob file doesn't exist yet → seed with defaults and save.
+    // First run: blob file doesn't exist yet → try migrating from local data.json first.
+    const localData = readLocalData();
+    if (localData) {
+      console.log('[BLOB] portal-data.json not found, migrating from local data.json.');
+      const { data: migrated } = await applyMigrations(localData);
+      await writeBlobData(migrated);
+      return migrated;
+    }
     console.log('[BLOB] portal-data.json not found, seeding with defaults.');
     const data = cloneDefault(DEFAULT_PORTAL_DATA);
     await writeBlobData(data);
@@ -770,6 +813,14 @@ app.post('/api/content', requireAdmin, async (req, res) => {
       typeof incomingData.discordWebhook === 'string'
         ? incomingData.discordWebhook
         : currentData.discordWebhook,
+    discordUrl:
+      typeof incomingData.discordUrl === 'string'
+        ? incomingData.discordUrl
+        : currentData.discordUrl,
+    tiktokUrl:
+      typeof incomingData.tiktokUrl === 'string'
+        ? incomingData.tiktokUrl
+        : currentData.tiktokUrl,
   };
 
   if (
@@ -863,8 +914,9 @@ app.post('/api/upload', requireAdmin, upload.single('file'), async (req, res) =>
 
     // Save to Vercel Blob or fallback to local storage
     let fileUrl = '';
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const blob = await put(filename, buffer, { access: 'public' });
+    const blobToken = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+    if (blobToken) {
+      const blob = await put(filename, buffer, { access: 'public', token: blobToken });
       fileUrl = blob.url;
     } else {
       fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
