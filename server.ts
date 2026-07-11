@@ -1110,6 +1110,22 @@ async function readMediaLibrary(): Promise<any[]> {
         const url = `${baseUrl}/${MEDIA_LIBRARY_FILENAME}?t=${Date.now()}`;
         const resp = await fetch(url, { headers: { 'Cache-Control': 'no-cache, no-store' } });
         if (resp.ok) return await resp.json();
+        if (resp.status !== 404) {
+          console.error('Media library fetch error:', resp.status);
+        }
+      }
+      try {
+        const { blobs } = await list({ prefix: MEDIA_LIBRARY_FILENAME, token });
+        const match = blobs.find((b) => b.pathname === MEDIA_LIBRARY_FILENAME);
+        if (match) {
+          const bustUrl = `${match.url}?t=${Date.now()}`;
+          const resp = await fetch(bustUrl, { headers: { 'Cache-Control': 'no-cache, no-store' } });
+          if (resp.ok) return await resp.json();
+        }
+        return [];
+      } catch (listErr) {
+        console.error('Media library list fallback error:', listErr);
+        return [];
       }
     }
     const localPath = path.join(process.cwd(), MEDIA_LIBRARY_FILENAME);

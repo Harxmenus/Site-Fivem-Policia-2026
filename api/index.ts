@@ -1195,13 +1195,33 @@ async function readMediaLibrary(): Promise<any[]> {
   const token = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
   try {
     if (hasBlobConfig()) {
+      // Try direct URL first (faster)
       const baseUrl = token ? getBlobBaseUrl(token) : null;
       if (baseUrl) {
         const url = `${baseUrl}/${MEDIA_LIBRARY_FILENAME}?t=${Date.now()}`;
         const resp = await fetch(url, { headers: { 'Cache-Control': 'no-cache, no-store' } });
         if (resp.ok) return await resp.json();
+        if (resp.status !== 404) {
+          console.error('Media library fetch error:', resp.status);
+        }
+      }
+      // Fallback: list blobs (slower, but works with any token format)
+      try {
+        const { blobs } = await list({ prefix: MEDIA_LIBRARY_FILENAME, token });
+        const match = blobs.find((b) => b.pathname === MEDIA_LIBRARY_FILENAME);
+        if (match) {
+          const bustUrl = `${match.url}?t=${Date.now()}`;
+          const resp = await fetch(bustUrl, { headers: { 'Cache-Control': 'no-cache, no-store' } });
+          if (resp.ok) return await resp.json();
+        }
+        // File doesn't exist yet — that's fine, return empty array
+        return [];
+      } catch (listErr) {
+        console.error('Media library list fallback error:', listErr);
+        return [];
       }
     }
+    // Local dev fallback
     const localPath = path.join(process.cwd(), MEDIA_LIBRARY_FILENAME);
     if (fs.existsSync(localPath)) {
       return JSON.parse(fs.readFileSync(localPath, 'utf-8'));
