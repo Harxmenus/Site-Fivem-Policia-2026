@@ -385,6 +385,7 @@ export default function App() {
         toggleDarkMode={toggleDarkMode}
         discordUrl={portalData.discordUrl || ''}
         tiktokUrl={portalData.tiktokUrl || ''}
+        portalName={portalData.portalName || 'GTO Tático'}
       />
 
       {/* CORE WRAPPER */}

@@ -12,6 +12,7 @@ interface HeaderProps {
   toggleDarkMode: () => void;
   discordUrl: string;
   tiktokUrl: string;
+  portalName: string;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -25,6 +26,7 @@ const Header: React.FC<HeaderProps> = ({
   toggleDarkMode,
   discordUrl,
   tiktokUrl,
+  portalName,
 }) => {
   const isActive = (paths: string[]) => paths.includes(currentPath);
   const currentDiscordUrl = discordUrl?.trim() || 'https://discord.gg/EwR6fKMYk';
@@ -75,7 +77,7 @@ const Header: React.FC<HeaderProps> = ({
                 Portal Oficial
               </span>
               <span className="text-lg md:text-xl font-extrabold tracking-tight text-white leading-none">
-                GTO Tático
+                {portalName}
               </span>
             </div>
           </div>

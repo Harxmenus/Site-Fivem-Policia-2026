@@ -73,6 +73,7 @@ export default function AdminPanel({
   const [timelineForm, setTimelineForm] = useState<TimelineEvent[]>(portalData.timeline);
   const [statisticsForm, setStatisticsForm] = useState<StatisticItem[]>(portalData.statistics);
   const [galleryForm, setGalleryForm] = useState<GalleryItem[]>(portalData.gallery);
+  const [portalName, setPortalName] = useState(portalData.portalName || 'GTO Tático');
   const [discordWebhook, setDiscordWebhook] = useState(portalData.discordWebhook);
   const [discordUrl, setDiscordUrl] = useState(portalData.discordUrl || '');
   const [tiktokUrl, setTiktokUrl] = useState(portalData.tiktokUrl || '');
@@ -105,6 +106,7 @@ export default function AdminPanel({
     setTimelineForm(portalData.timeline);
     setStatisticsForm(portalData.statistics);
     setGalleryForm(portalData.gallery);
+    setPortalName(portalData.portalName || 'GTO Tático');
     setDiscordWebhook(portalData.discordWebhook);
     setDiscordUrl(portalData.discordUrl || '');
     setTiktokUrl(portalData.tiktokUrl || '');
@@ -446,6 +448,12 @@ export default function AdminPanel({
     setDiscordUrl(trimmedDiscordUrl);
     setTiktokUrl(trimmedTiktokUrl);
     handleSave({ discordUrl: trimmedDiscordUrl, tiktokUrl: trimmedTiktokUrl });
+  };
+
+  const savePortalNameConfig = () => {
+    const trimmed = portalName?.trim() || 'GTO Tático';
+    setPortalName(trimmed);
+    handleSave({ portalName: trimmed });
   };
 
   // Password / Admin Config Action
@@ -1685,6 +1693,49 @@ export default function AdminPanel({
                         <Save size={12} />
                       )}{' '}
                       Salvar Links
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Portal Name Configuration */}
+              <div className="space-y-4">
+                <div className="border-b border-slate-800 pb-3">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Nome do Portal
+                  </h3>
+                  <p className="text-slate-400 text-[10px] mt-0.5">
+                    Altere o nome exibido no cabeçalho ao lado do ícone.
+                  </p>
+                </div>
+                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-5 space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Nome do Portal
+                    </label>
+                    <input
+                      type="text"
+                      value={portalName}
+                      onChange={(e) => setPortalName(e.target.value)}
+                      placeholder="GTO Tático"
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+                    />
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      Exibido como "Portal Oficial {'{nome}'}" no cabeçalho do site.
+                    </p>
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={savePortalNameConfig}
+                      disabled={isSaving}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      {isSaving ? (
+                        <RefreshCw size={12} className="animate-spin" />
+                      ) : (
+                        <Save size={12} />
+                      )}{' '}
+                      Salvar Nome
                     </button>
                   </div>
                 </div>

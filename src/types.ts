@@ -67,6 +67,7 @@ export interface SubmissionItem {
 }
 
 export interface PortalData {
+  portalName: string;
   discordWebhook: string;
   discordUrl: string;
   tiktokUrl: string;
