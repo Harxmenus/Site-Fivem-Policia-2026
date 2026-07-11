@@ -1,81 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import express from 'express';
+import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
-import { kv } from '@vercel/kv';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { put, list } from '@vercel/blob';
 
 // Load environment variables
 dotenv.config();
-
-/*
-  Temporarily allow `any` in this server file to reduce noise from
-  numerous external-client types; we'll tighten types incrementally.
-*/
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-// Supabase client (optional). To enable, set SUPABASE_URL and SUPABASE_SERVICE_ROLE
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_KEY;
-let supabase: SupabaseClient | null = null;
-if (SUPABASE_URL && SUPABASE_SERVICE_ROLE) {
-  try {
-    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
-      auth: { persistSession: false },
-    });
-    console.log('Supabase client initialized.');
-  } catch (_err) {
-    console.warn('Failed to initialize Supabase client:', _err);
-    supabase = null;
-  }
-}
-
-// Simple KV wrapper: use Supabase table `kv(key text primary key, value jsonb)` when available,
-// otherwise fall back to `@vercel/kv`.
-async function kvGet(key: string): Promise<any> {
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('kv')
-        .select('value')
-        .eq('key', key)
-        .maybeSingle();
-      if (error) throw error;
-      return data?.value ?? null;
-    } catch (_err) {
-      console.error('Supabase KV get error:', _err);
-      return null;
-    }
-  }
-  try {
-    return await kv.get(key as any);
-  } catch (_err) {
-    console.error('Vercel KV get error:', _err);
-    return null;
-  }
-}
-
-async function kvSet(key: string, value: any): Promise<void> {
-  if (supabase) {
-    try {
-      const { error } = await supabase.from('kv').upsert({ key, value });
-      if (error) throw error;
-      return;
-    } catch (_err) {
-      console.error('Supabase KV set error:', _err);
-      throw _err;
-    }
-  }
-  try {
-    await kv.set(key as any, value);
-  } catch (_err) {
-    console.error('Vercel KV set error:', _err);
-    throw _err;
-  }
-}
 
 const app = express();
 app.disable('x-powered-by');
@@ -84,11 +19,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const PORT = Number(process.env.PORT) || 3000;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const DATA_FILE = path.join(process.cwd(), 'data.json');
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const TOKEN_FILE = path.join(process.cwd(), '.admin-token');
 
 app.use(express.json({ limit: '25mb' }));
@@ -104,24 +36,28 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 // ---------------------------------------------------------------------------
 // Admin session token
 // ---------------------------------------------------------------------------
-// Instead of a hardcoded token literal (which anyone reading the source could
-// reuse to authenticate), we read it from the environment or, failing that,
-// generate a random token once and persist it to disk so it survives restarts.
-async function getAdminToken(): Promise<string> {
+// Token is read from ADMIN_TOKEN_SECRET env var or generated once and persisted
+// to a local file (.admin-token) so it survives server restarts in dev/prod.
+function getAdminToken(): string {
   if (process.env.ADMIN_TOKEN_SECRET) {
     return process.env.ADMIN_TOKEN_SECRET;
   }
+  // Persist to disk so the token survives restarts
   try {
-    const existing = await kvGet('admin_token');
-    if (existing) return existing as string;
+    if (fs.existsSync(TOKEN_FILE)) {
+      const existing = fs.readFileSync(TOKEN_FILE, 'utf-8').trim();
+      if (existing) return existing;
+    }
     const generated = crypto.randomBytes(32).toString('hex');
-    await kvSet('admin_token', generated);
+    fs.writeFileSync(TOKEN_FILE, generated, 'utf-8');
     return generated;
   } catch {
+    // Fallback: ephemeral token (restarts will invalidate sessions — acceptable)
     return crypto.randomBytes(32).toString('hex');
   }
 }
-const ADMIN_TOKEN = 'Vercel_KV_Dynamic_Token_Use_GetAdminToken_Instead';
+// Resolve once at startup so all requests share the same token value.
+const ADMIN_TOKEN = getAdminToken();
 
 // ---------------------------------------------------------------------------
 // Password hashing (uses Node's built-in crypto, no extra dependency needed)
@@ -388,8 +324,6 @@ const DEFAULT_PORTAL_DATA = {
     password: process.env.ADMIN_DEFAULT_PASSWORD || 'gto-password-2026',
   },
   discordWebhook: '',
-  discordUrl: '',
-  tiktokUrl: '',
   history: {
     title: 'Grupo Tático de Operações - GTO',
     subtitle: 'FORÇA, HONRA E DISCIPLINA',
@@ -531,85 +465,152 @@ function cloneDefault<T>(value: T): T {
 // ---------------------------------------------------------------------------
 // Data persistence
 // ---------------------------------------------------------------------------
+// Strategy:
+//   - LOCAL DEV (no BLOB_READ_WRITE_TOKEN): read/write data.json on disk.
+//   - PRODUCTION (BLOB_READ_WRITE_TOKEN set): store the entire portal JSON
+//     as a single file called "portal-data.json" in Vercel Blob.
+// This replaces the deprecated @vercel/kv entirely.
+// ---------------------------------------------------------------------------
 
-// Reads the database file and applies safe, additive migrations.
-async function getPortalData(): Promise<any> {
+const BLOB_DATA_FILENAME = 'portal-data.json';
+
+function hasBlobConfig(): boolean {
+  return !!process.env.MY_BLOB_TOKEN || !!process.env.BLOB_READ_WRITE_TOKEN;
+}
+
+function readLocalData(): any {
   try {
-    let data = await kvGet('portal_data');
+    if (fs.existsSync(DATA_FILE)) {
+      return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    }
+  } catch {
+    // Ignore error
+  }
+  return null;
+}
+
+function writeLocalData(data: any): boolean {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    return true;
+  } catch (err) {
+    console.error('Error writing local data.json:', err);
+    return false;
+  }
+}
+
+// Simple in-memory cache so we don't download the blob on every request
+let blobDataCache: { data: any; etag?: string } | null = null;
+
+async function readBlobData(): Promise<any | null> {
+  try {
+    // List blobs to find ours
+    const { blobs } = await list({ prefix: BLOB_DATA_FILENAME, token: process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN });
+    const match = blobs.find((b) => b.pathname === BLOB_DATA_FILENAME);
+    if (!match) return null;
+    const response = await fetch(match.url);
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (err) {
+    console.error('Error reading blob data:', err);
+    return null;
+  }
+}
+
+async function writeBlobData(data: any): Promise<boolean> {
+  try {
+    const json = JSON.stringify(data);
+    const buffer = Buffer.from(json, 'utf-8');
+    const token = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+    console.log('[BLOB] token present:', !!token, 'token prefix:', token?.substring(0, 15));
+    await put(BLOB_DATA_FILENAME, buffer, {
+      access: 'public',
+      contentType: 'application/json',
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      token,
+    });
+    // Invalidate cache
+    blobDataCache = { data };
+    return true;
+  } catch (err: any) {
+    console.error('Error writing blob data:', err?.message, err?.cause?.message, JSON.stringify(err));
+    return false;
+  }
+}
+
+async function applyMigrations(data: any): Promise<{ data: any; updated: boolean }> {
+  let updated = false;
+  if (!data.history) {
+    data.history = cloneDefault(DEFAULT_PORTAL_DATA.history);
+    updated = true;
+  } else if (data.history.about === undefined) {
+    const defaults = cloneDefault(DEFAULT_PORTAL_DATA.history);
+    data.history.about = defaults.about;
+    data.history.homenagemText = data.history.homenagemText ?? defaults.homenagemText;
+    data.history.homenagemNames = data.history.homenagemNames ?? defaults.homenagemNames;
+    delete data.history.mission;
+    delete data.history.values;
+    updated = true;
+  }
+  if (Array.isArray(data.submissions)) {
+    data.submissions.forEach((submission: any) => {
+      if (!submission.passport && submission.phone) {
+        submission.passport = submission.phone;
+        delete submission.phone;
+        updated = true;
+      }
+    });
+  }
+  if (Array.isArray(data.gallery)) {
+    const fallbackCategoryById: Record<string, string> = {
+      g1: 'Patrulhamento',
+      g2: 'Operações',
+      g3: 'Certificados',
+      g4: 'Abordagens',
+      g5: 'Apreensões',
+    };
+    data.gallery.forEach((item: any) => {
+      const oldCat = item.category || fallbackCategoryById[item.id] || 'Patrulhamento';
+      let newCat = 'Patrulhamento';
+      if (oldCat.includes('Operações') || oldCat.includes('Operação')) newCat = 'Operações';
+      else if (oldCat.includes('Patrulhamento')) newCat = 'Patrulhamento';
+      else if (oldCat.includes('Abordagens') || oldCat.includes('Abordagem')) newCat = 'Abordagens';
+      else if (oldCat.includes('Certificados') || oldCat.includes('Certificado'))
+        newCat = 'Certificados';
+      else if (oldCat.includes('Apreensões') || oldCat.includes('Apreensão')) newCat = 'Apreensões';
+      if (item.category !== newCat) {
+        item.category = newCat;
+        updated = true;
+      }
+    });
+  }
+  return { data, updated };
+}
+
+async function getPortalData(): Promise<any> {
+  // ── Local dev ──────────────────────────────────────────────────────────────
+  if (!hasBlobConfig()) {
+    const local = readLocalData();
+    return local ?? cloneDefault(DEFAULT_PORTAL_DATA);
+  }
+
+  // ── Production: Vercel Blob ────────────────────────────────────────────────
+  try {
+    // Use cache when available
+    if (blobDataCache) return blobDataCache.data;
+
+    let data = await readBlobData();
     if (!data) {
       data = cloneDefault(DEFAULT_PORTAL_DATA);
-      await kvSet('portal_data', data);
+      await writeBlobData(data);
       return data;
     }
 
-    // Migrations
-    let updated = false;
-    if (!data.history) {
-      data.history = cloneDefault(DEFAULT_PORTAL_DATA.history);
-      updated = true;
-    } else if (data.history.about === undefined) {
-      const defaults = cloneDefault(DEFAULT_PORTAL_DATA.history);
-      data.history.about = defaults.about;
-      data.history.homenagemText = data.history.homenagemText ?? defaults.homenagemText;
-      data.history.homenagemNames = data.history.homenagemNames ?? defaults.homenagemNames;
-      delete data.history.mission;
-      delete data.history.values;
-      updated = true;
-    }
-    if (Array.isArray(data.submissions)) {
-      data.submissions.forEach((submission: any) => {
-        if (!submission.passport && submission.phone) {
-          submission.passport = submission.phone;
-          delete submission.phone;
-          updated = true;
-        }
-      });
-    }
-    if (Array.isArray(data.gallery)) {
-      const fallbackCategoryById: Record<string, string> = {
-        g1: 'Patrulhamento',
-        g2: 'Operações',
-        g3: 'Certificados',
-        g4: 'Abordagens',
-        g5: 'Apreensões',
-      };
-      data.gallery.forEach((item: any) => {
-        const id = String(item.id ?? '');
-        const oldCat = item.category || fallbackCategoryById[id] || 'Patrulhamento';
-        let newCat = 'Patrulhamento';
-        if (oldCat.includes('Operações') || oldCat.includes('Operação')) {
-          newCat = 'Operações';
-        } else if (oldCat.includes('Patrulhamento')) {
-          newCat = 'Patrulhamento';
-        } else if (oldCat.includes('Abordagens') || oldCat.includes('Abordagem')) {
-          newCat = 'Abordagens';
-        } else if (oldCat.includes('Certificados') || oldCat.includes('Certificado')) {
-          newCat = 'Certificados';
-        } else if (oldCat.includes('Apreensões') || oldCat.includes('Apreensão')) {
-          newCat = 'Apreensões';
-        }
-
-        if (item.category !== newCat) {
-          item.category = newCat;
-          updated = true;
-        }
-      });
-    }
-
-    if (data.discordUrl === undefined) {
-      data.discordUrl = '';
-      updated = true;
-    }
-    if (data.tiktokUrl === undefined) {
-      data.tiktokUrl = '';
-      updated = true;
-    }
-
-    if (updated) {
-      await kv.set('portal_data', data);
-    }
-
-    return data;
+    const { data: migrated, updated } = await applyMigrations(data);
+    if (updated) await writeBlobData(migrated);
+    blobDataCache = { data: migrated };
+    return migrated;
   } catch (error) {
     console.error('Error reading portal data, returning default fallback:', error);
     return cloneDefault(DEFAULT_PORTAL_DATA);
@@ -617,13 +618,14 @@ async function getPortalData(): Promise<any> {
 }
 
 async function savePortalData(data: any): Promise<boolean> {
-  try {
-    await kvSet('portal_data', data);
-    return true;
-  } catch (error) {
-    console.error('Error writing portal data:', error);
-    return false;
+  // ── Local dev ──────────────────────────────────────────────────────────────
+  if (!hasBlobConfig()) {
+    return writeLocalData(data);
   }
+
+  // ── Production: Vercel Blob ────────────────────────────────────────────────
+  blobDataCache = null; // Invalidate cache on write
+  return writeBlobData(data);
 }
 
 // ---------------------------------------------------------------------------
@@ -683,7 +685,7 @@ async function verifyAdminCredentials(
   const matches = password === creds.password;
   if (matches) {
     data.adminCredentials.password = hashPassword(password);
-    await await savePortalData(data);
+    await savePortalData(data);
   }
   return matches;
 }
@@ -695,8 +697,8 @@ async function verifyAdminCredentials(
 // 1. Get Portal Data (excludes credentials for safety)
 app.get('/api/content', async (req, res) => {
   const data = await getPortalData();
-  const publicData = { ...data } as any;
-  delete publicData.adminCredentials;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { adminCredentials, ...publicData } = data;
   res.json(publicData);
 });
 
@@ -717,6 +719,7 @@ app.post('/api/login', async (req, res) => {
   const data = await getPortalData();
   if (await verifyAdminCredentials(data, username, password)) {
     resetLoginAttempts(ip);
+    // Return the real session token so subsequent authenticated requests work
     res.json({ token: ADMIN_TOKEN, username });
   } else {
     res.status(401).json({ error: 'Usuário ou senha incorretos.' });
@@ -746,12 +749,6 @@ app.post('/api/content', requireAdmin, async (req, res) => {
       typeof incomingData.discordWebhook === 'string'
         ? incomingData.discordWebhook
         : currentData.discordWebhook,
-    discordUrl:
-      typeof incomingData.discordUrl === 'string'
-        ? incomingData.discordUrl
-        : currentData.discordUrl,
-    tiktokUrl:
-      typeof incomingData.tiktokUrl === 'string' ? incomingData.tiktokUrl : currentData.tiktokUrl,
   };
 
   if (
@@ -768,8 +765,8 @@ app.post('/api/content', requireAdmin, async (req, res) => {
   }
 
   if (await savePortalData(updatedData)) {
-    const publicData = { ...updatedData } as any;
-    delete publicData.adminCredentials;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { adminCredentials, ...publicData } = updatedData;
     res.json({ success: true, data: publicData });
   } else {
     res.status(500).json({ error: 'Erro ao salvar os dados no servidor.' });
@@ -788,11 +785,38 @@ const ALLOWED_IMAGE_EXTENSIONS: Record<string, string> = {
   'image/gif': '.gif',
 };
 
+// Initialize multer for file uploads (must be declared before use)
+const upload = multer();
+
 // Image Upload Endpoint (protected)
-app.post('/api/upload', requireAdmin, async (req, res) => {
-  const { base64 } = req.body || {};
-  if (!base64 || typeof base64 !== 'string') {
+app.post('/api/upload', requireAdmin, upload.single('file'), async (req, res) => {
+  // ── Accept a raw URL: just return it as-is (no upload needed) ──────────────
+  // Check both top-level body.url and body.base64 that looks like a URL
+  const rawUrl = req.body?.url;
+  if (
+    typeof rawUrl === 'string' &&
+    (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))
+  ) {
+    return res.json({ success: true, url: rawUrl });
+  }
+
+  // Accept either a JSON body with a base64 string or a multipart file upload
+  let base64: string | undefined;
+  if (req.body && typeof req.body.base64 === 'string') {
+    base64 = req.body.base64;
+  } else if (req.file && req.file.buffer) {
+    const mime = req.file.mimetype;
+    const data = req.file.buffer.toString('base64');
+    base64 = `data:${mime};base64,${data}`;
+  }
+
+  if (!base64) {
     return res.status(400).json({ error: 'Dados de upload inválidos.' });
+  }
+
+  // Also handle if base64 field is actually a plain URL
+  if (base64.startsWith('http://') || base64.startsWith('https://')) {
+    return res.json({ success: true, url: base64 });
   }
 
   const matches = base64.match(/^data:([A-Za-z0-9.+-]+\/[A-Za-z0-9.+-]+);base64,(.+)$/);
@@ -816,29 +840,17 @@ app.post('/api/upload', requireAdmin, async (req, res) => {
 
     const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${extension}`;
 
-    // Local-only storage: write to ./uploads (always used for local/dev)
-    try {
-      const localPath = path.join(UPLOADS_DIR, filename);
-      await fs.promises.writeFile(localPath, buffer, { flag: 'wx' }).catch(async (e) => {
-        // If file exists, overwrite safely
-        if ((e as any)?.code === 'EEXIST') {
-          await fs.promises.writeFile(localPath, buffer);
-          return;
-        }
-        throw e;
-      });
-      const publicUrl = `/uploads/${filename}`;
-      return res.json({
-        success: true,
-        storageProvider: 'local',
-        path: publicUrl,
-        signedUrl: publicUrl,
-        url: publicUrl,
-      });
-    } catch (localErr) {
-      console.error('Local upload error:', localErr);
-      throw localErr;
+    // Save to Vercel Blob or fallback to local storage
+    let fileUrl = '';
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put(filename, buffer, { access: 'public' });
+      fileUrl = blob.url;
+    } else {
+      fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
+      fileUrl = `/uploads/${filename}`;
     }
+
+    res.json({ success: true, url: fileUrl });
   } catch (err: any) {
     console.error('Upload error:', err);
     res.status(500).json({ error: 'Erro ao salvar imagem no servidor.' });
@@ -1025,7 +1037,6 @@ Por favor, escreva um parágrafo polido, sem quebras de linha longas ou formata�
   }
 });
 
-// ---------------------------------------------------------------------------
-// Static build / dev server
-// ---------------------------------------------------------------------------
+
+
 export default app;

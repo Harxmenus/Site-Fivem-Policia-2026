@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { createServer as createViteServer } from 'vite';
+
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { put, list } from '@vercel/blob';
@@ -50,7 +51,7 @@ function getAdminToken(): string {
     const generated = crypto.randomBytes(32).toString('hex');
     fs.writeFileSync(TOKEN_FILE, generated, 'utf-8');
     return generated;
-  } catch (_) {
+  } catch {
     // Fallback: ephemeral token (restarts will invalidate sessions — acceptable)
     return crypto.randomBytes(32).toString('hex');
   }
@@ -474,7 +475,7 @@ function cloneDefault<T>(value: T): T {
 const BLOB_DATA_FILENAME = 'portal-data.json';
 
 function hasBlobConfig(): boolean {
-  return !!process.env.BLOB_READ_WRITE_TOKEN;
+  return !!process.env.MY_BLOB_TOKEN || !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
 function readLocalData(): any {
@@ -482,7 +483,9 @@ function readLocalData(): any {
     if (fs.existsSync(DATA_FILE)) {
       return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
     }
-  } catch (_) {}
+  } catch {
+    // Ignore error
+  }
   return null;
 }
 
@@ -502,7 +505,7 @@ let blobDataCache: { data: any; etag?: string } | null = null;
 async function readBlobData(): Promise<any | null> {
   try {
     // List blobs to find ours
-    const { blobs } = await list({ prefix: BLOB_DATA_FILENAME });
+    const { blobs } = await list({ prefix: BLOB_DATA_FILENAME, token: process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN });
     const match = blobs.find((b) => b.pathname === BLOB_DATA_FILENAME);
     if (!match) return null;
     const response = await fetch(match.url);
@@ -518,16 +521,20 @@ async function writeBlobData(data: any): Promise<boolean> {
   try {
     const json = JSON.stringify(data);
     const buffer = Buffer.from(json, 'utf-8');
+    const token = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+    console.log('[BLOB] token present:', !!token, 'token prefix:', token?.substring(0, 15));
     await put(BLOB_DATA_FILENAME, buffer, {
       access: 'public',
       contentType: 'application/json',
       addRandomSuffix: false,
+      allowOverwrite: true,
+      token,
     });
     // Invalidate cache
     blobDataCache = { data };
     return true;
-  } catch (err) {
-    console.error('Error writing blob data:', err);
+  } catch (err: any) {
+    console.error('Error writing blob data:', err?.message, err?.cause?.message, JSON.stringify(err));
     return false;
   }
 }
@@ -569,9 +576,13 @@ async function applyMigrations(data: any): Promise<{ data: any; updated: boolean
       if (oldCat.includes('Operações') || oldCat.includes('Operação')) newCat = 'Operações';
       else if (oldCat.includes('Patrulhamento')) newCat = 'Patrulhamento';
       else if (oldCat.includes('Abordagens') || oldCat.includes('Abordagem')) newCat = 'Abordagens';
-      else if (oldCat.includes('Certificados') || oldCat.includes('Certificado')) newCat = 'Certificados';
+      else if (oldCat.includes('Certificados') || oldCat.includes('Certificado'))
+        newCat = 'Certificados';
       else if (oldCat.includes('Apreensões') || oldCat.includes('Apreensão')) newCat = 'Apreensões';
-      if (item.category !== newCat) { item.category = newCat; updated = true; }
+      if (item.category !== newCat) {
+        item.category = newCat;
+        updated = true;
+      }
     });
   }
   return { data, updated };
@@ -686,6 +697,7 @@ async function verifyAdminCredentials(
 // 1. Get Portal Data (excludes credentials for safety)
 app.get('/api/content', async (req, res) => {
   const data = await getPortalData();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { adminCredentials, ...publicData } = data;
   res.json(publicData);
 });
@@ -753,6 +765,7 @@ app.post('/api/content', requireAdmin, async (req, res) => {
   }
 
   if (await savePortalData(updatedData)) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { adminCredentials, ...publicData } = updatedData;
     res.json({ success: true, data: publicData });
   } else {
@@ -780,7 +793,10 @@ app.post('/api/upload', requireAdmin, upload.single('file'), async (req, res) =>
   // ── Accept a raw URL: just return it as-is (no upload needed) ──────────────
   // Check both top-level body.url and body.base64 that looks like a URL
   const rawUrl = req.body?.url;
-  if (typeof rawUrl === 'string' && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))) {
+  if (
+    typeof rawUrl === 'string' &&
+    (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))
+  ) {
     return res.json({ success: true, url: rawUrl });
   }
 
@@ -1021,36 +1037,6 @@ Por favor, escreva um parágrafo polido, sem quebras de linha longas ou formata�
   }
 });
 
-// ---------------------------------------------------------------------------
-// Static build / dev server
-// ---------------------------------------------------------------------------
-async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    // Development: serve through Vite for HMR
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    // Production: serve the compiled dist folder
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
 
-  app.listen(PORT, () => {
-    console.log(`🚀 Express server listening on http://localhost:${PORT}`);
-  });
-}
-
-process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled promise rejection:', reason);
-});
-
-// Start the server (works in both CommonJS compiled output and direct ts-node)
-startServer();
 
 export default app;
