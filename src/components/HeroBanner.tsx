@@ -162,7 +162,7 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
 
       {/* Content — only shown in non-preview mode */}
       <div className={`relative z-10 ${RESPONSIVE_HEIGHTS} flex flex-col`}>
-        <div className="flex-1 px-6 md:px-12 py-10 flex flex-col justify-center">
+        <div className="flex-1 px-6 md:px-12 pt-14 pb-4 flex flex-col justify-start">
           <div className="max-w-3xl space-y-4">
             <motion.span
               initial={{ opacity: 0, y: 10 }}
