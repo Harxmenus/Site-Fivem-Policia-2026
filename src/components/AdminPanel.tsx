@@ -850,6 +850,70 @@ export default function AdminPanel({
                     )}
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-950/30 border border-slate-800 rounded-xl">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Ajuste da Imagem
+                      </label>
+                      <select
+                        value={historyForm.bannerFit || 'auto'}
+                        onChange={(e) =>
+                          setHistoryForm((prev) => ({ ...prev, bannerFit: e.target.value as 'cover' | 'contain' | 'auto' }))
+                        }
+                        className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none"
+                      >
+                        <option value="auto">Automático (inteligente)</option>
+                        <option value="cover">Cover (preencher)</option>
+                        <option value="contain">Contain (mostrar toda)</option>
+                      </select>
+                      <p className="text-[9px] text-slate-500">
+                        Auto detecta proporção e escolhe o melhor modo.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Posição (object-position)
+                      </label>
+                      <input
+                        type="text"
+                        value={historyForm.bannerPosition || 'center center'}
+                        onChange={(e) =>
+                          setHistoryForm((prev) => ({ ...prev, bannerPosition: e.target.value }))
+                        }
+                        placeholder="Ex: center top, 30% center"
+                        className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2.5 py-2 text-xs text-white font-mono focus:outline-none"
+                      />
+                      <p className="text-[9px] text-slate-500">
+                        CSS object-position (ex: center, top, 30% center).
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Altura (vh)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min={30}
+                          max={120}
+                          value={historyForm.bannerHeight || 0}
+                          onChange={(e) =>
+                            setHistoryForm((prev) => ({ ...prev, bannerHeight: Number(e.target.value) }))
+                          }
+                          className="flex-1 accent-red-500"
+                        />
+                        <span className="text-xs font-mono text-white min-w-[3rem] text-right">
+                          {historyForm.bannerHeight || 0}vh
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-slate-500">
+                        0 = automático. Em telas grandes, 80-100vh é ideal.
+                      </p>
+                    </div>
+                  </div>
+
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">

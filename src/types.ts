@@ -6,13 +6,16 @@ export interface AdminCredentials {
 export interface HistoryConfig {
   title: string;
   subtitle: string;
-  content: string; // "Nossa História"
-  about: string; // "Sobre o Grupo"
+  content: string;
+  about: string;
   homenagemText: string;
   homenagemNames: string[];
   bannerUrl: string;
-  mission?: string; // kept for backwards compatibility
-  values?: string; // kept for backwards compatibility
+  mission?: string;
+  values?: string;
+  bannerFit?: 'cover' | 'contain' | 'auto';
+  bannerPosition?: string;
+  bannerHeight?: number;
 }
 
 export interface TimelineEvent {

@@ -26,6 +26,16 @@ const TOKEN_FILE = path.join(process.cwd(), '.admin-token');
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
+// Force UTF-8 charset on all API JSON responses
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = function (body: any) {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return originalJson(body);
+  };
+  next();
+});
+
 // Ensure uploads directory exists and is served statically
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
 try {
@@ -352,6 +362,9 @@ const DEFAULT_PORTAL_DATA = {
     ],
     bannerUrl:
       'https://images.unsplash.com/photo-1508847154043-be12a327dc6f?q=80&w=1200&auto=format&fit=crop',
+    bannerFit: 'auto',
+    bannerPosition: 'center center',
+    bannerHeight: 80,
   },
   timeline: [
     {
@@ -586,8 +599,21 @@ async function writeBlobData(data: any): Promise<boolean> {
   }
 }
 
+// Add BOM to force UTF-8 in downstream consumers that might guess the encoding
+const UTF8_BOM = '\uFEFF';
+
+function encodeUTF8Safe(data: any): string {
+  return JSON.stringify(data, null, 2);
+}
+
 async function applyMigrations(data: any): Promise<{ data: any; updated: boolean }> {
   let updated = false;
+  // Force re-save to ensure UTF-8 encoding is correct in Blob storage
+  // (fixes legacy data that may have been saved with incorrect charset)
+  if (data._utf8fixed === undefined) {
+    data._utf8fixed = true;
+    updated = true;
+  }
   if (!data.history) {
     data.history = cloneDefault(DEFAULT_PORTAL_DATA.history);
     updated = true;
