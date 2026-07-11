@@ -529,8 +529,10 @@ type BlobReadResult =
   | { status: 'not_found' }
   | { status: 'error'; err: unknown };
 
-// Store the latest written data in memory to avoid Blob read-after-write
-// eventual-consistency issues within the same serverless instance.
+// In-memory cache that survives across requests within the same serverless
+// instance.  Updated on every successful read AND every write so that even
+// if Blob is unreachable the instance still serves the last known good data
+// — preventing banner/image flickering between refreshes.
 let cachedPortalData: any = null;
 
 function getBlobBaseUrl(token: string): string | null {
@@ -540,10 +542,16 @@ function getBlobBaseUrl(token: string): string | null {
   return `https://${storeId}.public.blob.vercel-storage.com`;
 }
 
-async function readBlobData(): Promise<BlobReadResult> {
+// Retry once on the first fetch (cache is null) to handle transient cold-start
+// network hiccups that would otherwise cause banner flicker between instances.
+const MAX_READ_ATTEMPTS = 2;
+
+async function readBlobData(attempt = 1): Promise<BlobReadResult> {
   try {
     const token = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
-    // Check in-memory cache first (same instance, just-after-write)
+
+    // Single-instance cache — return immediately so every request on this
+    // warm instance gets the exact same data (no flicker between refreshes).
     if (cachedPortalData !== null) {
       return { status: 'ok', data: cachedPortalData };
     }
@@ -555,13 +563,17 @@ async function readBlobData(): Promise<BlobReadResult> {
         headers: { 'Cache-Control': 'no-cache, no-store' },
       });
       if (response.status === 404) return { status: 'not_found' };
-      if (!response.ok) return { status: 'error', err: new Error(`HTTP ${response.status}`) };
+      if (!response.ok) {
+        return attempt < MAX_READ_ATTEMPTS
+          ? readBlobData(attempt + 1)
+          : { status: 'error', err: new Error(`HTTP ${response.status}`) };
+      }
       const data = await response.json();
       cachedPortalData = data;
       return { status: 'ok', data };
     }
 
-    // Fallback: list blobs (slower, may have eventual consistency)
+    // Fallback: list blobs (slower)
     const { blobs } = await list({ prefix: BLOB_DATA_FILENAME, token });
     const match = blobs.find((b) => b.pathname === BLOB_DATA_FILENAME);
     if (!match) return { status: 'not_found' };
@@ -569,14 +581,37 @@ async function readBlobData(): Promise<BlobReadResult> {
     const response = await fetch(bustUrl, {
       headers: { 'Cache-Control': 'no-cache, no-store' },
     });
-    if (!response.ok) return { status: 'error', err: new Error(`HTTP ${response.status}`) };
+    if (!response.ok) {
+      return attempt < MAX_READ_ATTEMPTS
+        ? readBlobData(attempt + 1)
+        : { status: 'error', err: new Error(`HTTP ${response.status}`) };
+    }
     const data = await response.json();
     cachedPortalData = data;
     return { status: 'ok', data };
   } catch (err) {
+    if (attempt < MAX_READ_ATTEMPTS) return readBlobData(attempt + 1);
     console.error('Error reading blob data:', err);
     return { status: 'error', err };
   }
+}
+
+// Fallback chain when the primary Blob read fails:
+//   1. cachedPortalData (last known good data on this instance)
+//   2. data.json on disk (local file deployed with the project)
+//   3. Compile-time DEFAULT_PORTAL_DATA (last resort)
+function getFallbackData(): any {
+  if (cachedPortalData !== null) {
+    return cachedPortalData;
+  }
+  const localData = readLocalData();
+  if (localData) {
+    cachedPortalData = localData;
+    return localData;
+  }
+  const fallback = cloneDefault(DEFAULT_PORTAL_DATA);
+  cachedPortalData = fallback;
+  return fallback;
 }
 
 async function writeBlobData(data: any): Promise<boolean> {
@@ -611,12 +646,6 @@ function encodeUTF8Safe(data: any): string {
 
 async function applyMigrations(data: any): Promise<{ data: any; updated: boolean }> {
   let updated = false;
-  // Force re-save to ensure UTF-8 encoding is correct in Blob storage
-  // (fixes legacy data that may have been saved with incorrect charset)
-  if (data._utf8fixed === undefined) {
-    data._utf8fixed = true;
-    updated = true;
-  }
   if (!data.history) {
     data.history = cloneDefault(DEFAULT_PORTAL_DATA.history);
     updated = true;
@@ -694,10 +723,8 @@ async function getPortalData(): Promise<any> {
   }
 
   if (result.status === 'error') {
-    // Transient read error: return defaults IN MEMORY only — NEVER overwrite
-    // the saved blob, or we'd erase all user data on a bad network request.
-    console.error('[BLOB] Read error — returning in-memory defaults WITHOUT overwriting saved data.');
-    return cloneDefault(DEFAULT_PORTAL_DATA);
+    console.error('[BLOB] Read error — using fallback data (cached → data.json → defaults).');
+    return getFallbackData();
   }
 
   // status === 'ok'
@@ -789,6 +816,9 @@ async function verifyAdminCredentials(
 
 // 1. Get Portal Data (excludes credentials for safety)
 app.get('/api/content', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   const data = await getPortalData();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { adminCredentials, ...publicData } = data;
@@ -821,6 +851,9 @@ app.post('/api/login', async (req, res) => {
 
 // 3. Update Portal Data
 app.post('/api/content', requireAdmin, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   const incomingData = req.body || {};
   const currentData = await getPortalData();
 
@@ -961,6 +994,9 @@ app.post('/api/upload', requireAdmin, upload.single('file'), async (req, res) =>
 
 // 4. Delete a Candidate Submission
 app.delete('/api/submissions/:id', requireAdmin, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   const { id } = req.params;
   const currentData = await getPortalData();
   currentData.submissions = (currentData.submissions || []).filter((sub: any) => sub.id !== id);
@@ -974,6 +1010,9 @@ app.delete('/api/submissions/:id', requireAdmin, async (req, res) => {
 
 // 5. Submit candidate test
 app.post('/api/submit-test', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   const { name, discordTag, age, passport, phone, answers } = req.body || {};
 
   const trimmedName = typeof name === 'string' ? name.trim() : '';
