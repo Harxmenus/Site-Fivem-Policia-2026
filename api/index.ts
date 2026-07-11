@@ -1180,4 +1180,291 @@ Por favor, escreva um parágrafo polido, sem quebras de linha longas ou formata�
 
 
 
+// ---------------------------------------------------------------------------
+// Media Library
+// ---------------------------------------------------------------------------
+// Stores metadata for every uploaded image, tracks usage, prevents duplicates
+// and orphan deletions. The list itself is persisted in media-library.json
+// (Blob in production, local FS in dev).
+
+const MEDIA_LIBRARY_FILENAME = 'media-library.json';
+
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
+async function readMediaLibrary(): Promise<any[]> {
+  const token = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+  try {
+    if (hasBlobConfig()) {
+      const baseUrl = token ? getBlobBaseUrl(token) : null;
+      if (baseUrl) {
+        const url = `${baseUrl}/${MEDIA_LIBRARY_FILENAME}?t=${Date.now()}`;
+        const resp = await fetch(url, { headers: { 'Cache-Control': 'no-cache, no-store' } });
+        if (resp.ok) return await resp.json();
+      }
+    }
+    const localPath = path.join(process.cwd(), MEDIA_LIBRARY_FILENAME);
+    if (fs.existsSync(localPath)) {
+      return JSON.parse(fs.readFileSync(localPath, 'utf-8'));
+    }
+  } catch (err) {
+    console.error('Error reading media library:', err);
+  }
+  return [];
+}
+
+async function saveMediaLibrary(items: any[]): Promise<boolean> {
+  try {
+    const json = JSON.stringify(items);
+    const buffer = Buffer.from(json, 'utf-8');
+    if (hasBlobConfig()) {
+      const token = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+      await put(MEDIA_LIBRARY_FILENAME, buffer, {
+        access: 'public',
+        contentType: 'application/json',
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        cacheControlMaxAge: 0,
+        token,
+      });
+    } else {
+      fs.writeFileSync(path.join(process.cwd(), MEDIA_LIBRARY_FILENAME), json, 'utf-8');
+    }
+    return true;
+  } catch (err) {
+    console.error('Error saving media library:', err);
+    return false;
+  }
+}
+
+function computeFileHash(buffer: Buffer): string {
+  return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
+// Scans portalData to map each image URL → list of human-readable usage locations
+async function buildUsageMap(portalData: any): Promise<Map<string, string[]>> {
+  const usage = new Map<string, string[]>();
+  if (!portalData) return usage;
+
+  const add = (url: string, location: string) => {
+    if (!url) return;
+    if (!usage.has(url)) usage.set(url, []);
+    const arr = usage.get(url)!;
+    if (!arr.includes(location)) arr.push(location);
+  };
+
+  if (portalData.history?.bannerUrl) {
+    add(portalData.history.bannerUrl, 'Hero Banner');
+  }
+  if (Array.isArray(portalData.gallery)) {
+    portalData.gallery.forEach((item: any) => {
+      if (item.url) {
+        add(item.url, `Galeria${item.caption ? `: ${item.caption}` : ''}`);
+      }
+    });
+  }
+  if (portalData.history?.content?.includes) {
+    // Coarse scan of rich-text fields for image URLs
+    const richText = portalData.history.content + ' ' + (portalData.history.about || '');
+    const httpUrls = richText.match(/https?:\/\/[^\s"']+/g) || [];
+    httpUrls.forEach((u: string) => {
+      const clean = u.replace(/[.,;:!?)]$/, '');
+      add(clean, 'História (corpo do texto)');
+    });
+  }
+  return usage;
+}
+
+// ── GET /api/media ─────────────────────────────────────────────────────────
+app.get('/api/media', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  try {
+    const [media, portalData] = await Promise.all([
+      readMediaLibrary(),
+      getPortalData().catch(() => null),
+    ]);
+
+    const usageMap = await buildUsageMap(portalData);
+
+    const enriched = media.map((item: any) => ({
+      ...item,
+      usage: usageMap.get(item.url) || [],
+    }));
+
+    res.json({ success: true, media: enriched });
+  } catch (err: any) {
+    console.error('Error listing media:', err);
+    res.status(500).json({ error: 'Erro ao listar biblioteca de mídia.' });
+  }
+});
+
+// ── POST /api/media/upload ─────────────────────────────────────────────────
+app.post('/api/media/upload', requireAdmin, upload.single('file'), async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  try {
+    // Extract base64 / buffer
+    let base64: string | undefined;
+    if (req.body && typeof req.body.base64 === 'string') {
+      base64 = req.body.base64;
+    } else if (req.file && req.file.buffer) {
+      const mime = req.file.mimetype;
+      const data = req.file.buffer.toString('base64');
+      base64 = `data:${mime};base64,${data}`;
+    }
+
+    if (!base64) {
+      return res.status(400).json({ error: 'Dados de upload inválidos.' });
+    }
+
+    if (base64.startsWith('http://') || base64.startsWith('https://')) {
+      const category = (req.body && req.body.category) || 'Outros';
+      const name = (req.body && req.body.name) || 'Imagem externa';
+      return res.json({ success: true, url: base64, mediaItem: { name, url: base64, category } });
+    }
+
+    const matches = base64.match(/^data:([A-Za-z0-9.+-]+\/[A-Za-z0-9.+-]+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ error: 'Formato Base64 inválido.' });
+    }
+
+    const mimeType = matches[1].toLowerCase();
+    const extension = ALLOWED_IMAGE_EXTENSIONS[mimeType];
+    if (!extension) {
+      return res.status(400).json({
+        error: 'Tipo de arquivo não permitido. Envie apenas imagens PNG, JPG, WEBP ou GIF.',
+      });
+    }
+
+    const buffer = Buffer.from(matches[2], 'base64');
+    if (buffer.length > 25 * 1024 * 1024) {
+      return res.status(413).json({ error: 'A imagem excede o limite máximo de 25MB.' });
+    }
+
+    // ── Duplicate detection (by SHA-256 file hash) ────────────────────────
+    const fileHash = computeFileHash(buffer);
+    const existingMedia = await readMediaLibrary();
+    const duplicate = existingMedia.find((m: any) => m.hash === fileHash);
+
+    if (duplicate) {
+      return res.json({
+        success: true,
+        url: duplicate.url,
+        duplicate: true,
+        mediaItem: duplicate,
+      });
+    }
+
+    // ── Persist uploaded file ──────────────────────────────────────────────
+    const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${extension}`;
+    let fileUrl = '';
+    const blobToken = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+    if (blobToken) {
+      const blob = await put(filename, buffer, { access: 'public', token: blobToken });
+      fileUrl = blob.url;
+    } else {
+      fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
+      fileUrl = `/uploads/${filename}`;
+    }
+
+    // ── Build media metadata ──────────────────────────────────────────────
+    const now = new Date().toISOString();
+    const mediaItem = {
+      id: 'media-' + crypto.randomUUID(),
+      name: (req.body && req.body.name) || filename,
+      url: fileUrl,
+      category: (req.body && req.body.category) || 'Outros',
+      size: buffer.length,
+      width: (req.body && req.body.width) || 0,
+      height: (req.body && req.body.height) || 0,
+      mimeType,
+      createdAt: now,
+      hash: fileHash,
+    };
+
+    existingMedia.push(mediaItem);
+    await saveMediaLibrary(existingMedia);
+
+    res.json({ success: true, url: fileUrl, duplicate: false, mediaItem });
+  } catch (err: any) {
+    console.error('Media upload error:', err);
+    res.status(500).json({ error: 'Erro ao fazer upload de imagem.' });
+  }
+});
+
+// ── PATCH /api/media/:id ──────────────────────────────────────────────────
+app.patch('/api/media/:id', requireAdmin, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  try {
+    const { id } = req.params;
+    const { name, category } = req.body || {};
+    const media = await readMediaLibrary();
+    const idx = media.findIndex((m: any) => m.id === id);
+
+    if (idx === -1) {
+      return res.status(404).json({ error: 'Mídia não encontrada.' });
+    }
+
+    if (name && typeof name === 'string' && name.trim()) {
+      media[idx].name = name.trim();
+    }
+    if (category && typeof category === 'string') {
+      media[idx].category = category;
+    }
+
+    await saveMediaLibrary(media);
+    res.json({ success: true, mediaItem: media[idx] });
+  } catch (err: any) {
+    console.error('Error updating media:', err);
+    res.status(500).json({ error: 'Erro ao atualizar mídia.' });
+  }
+});
+
+// ── DELETE /api/media/:id ─────────────────────────────────────────────────
+app.delete('/api/media/:id', requireAdmin, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  try {
+    const { id } = req.params;
+    const media = await readMediaLibrary();
+    const target = media.find((m: any) => m.id === id);
+
+    if (!target) {
+      return res.status(404).json({ error: 'Mídia não encontrada.' });
+    }
+
+    // Check usage
+    const portalData = await getPortalData().catch(() => null);
+    const usageMap = await buildUsageMap(portalData);
+    const usages = usageMap.get(target.url) || [];
+
+    if (usages.length > 0) {
+      return res.status(409).json({
+        error: 'Esta imagem está em uso e não pode ser excluída.',
+        usages,
+        mediaItem: target,
+      });
+    }
+
+    // Optional: delete the underlying blob/file too
+    // (keep it simple — blobs are cheap and we don't want to break references)
+    const filtered = media.filter((m: any) => m.id !== id);
+    await saveMediaLibrary(filtered);
+
+    res.json({ success: true, message: 'Mídia removida da biblioteca.' });
+  } catch (err: any) {
+    console.error('Error deleting media:', err);
+    res.status(500).json({ error: 'Erro ao excluir mídia.' });
+  }
+});
+
 export default app;

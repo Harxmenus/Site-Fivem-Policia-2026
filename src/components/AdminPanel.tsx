@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { PortalData, TimelineEvent, StatisticItem, GalleryItem } from '../types';
 import ImageWithFallback from './ImageWithFallback';
+import MediaLibraryModal from './MediaLibraryModal';
 import Toast, { useToast } from './Toast';
 
 interface AdminPanelProps {
@@ -85,6 +86,15 @@ export default function AdminPanel({
 
   // Custom delete confirmation state
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
+
+  // Media Library
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
+  const [mediaLibraryCallback, setMediaLibraryCallback] = useState<((url: string) => void) | null>(null);
+
+  const openMediaLibrary = (callback: (url: string) => void) => {
+    setMediaLibraryCallback(() => callback);
+    setMediaLibraryOpen(true);
+  };
 
   // Toast
   const { toasts, show: showToast, dismiss: dismissToast } = useToast();
@@ -800,7 +810,7 @@ export default function AdminPanel({
                   </div>
                 </div>
 
-                  <div className="space-y-1.5">
+                    <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                       URL do Banner Principal
                     </label>
@@ -812,31 +822,20 @@ export default function AdminPanel({
                         onChange={handleHistoryChange}
                         className="flex-1 bg-slate-950 border border-slate-800 focus:border-red-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none transition-all font-mono"
                       />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="upload-banner-input"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleImageUpload(file, (uploadedUrl) => {
-                              setHistoryForm((prev) => {
-                                const updated = { ...prev, bannerUrl: uploadedUrl };
-                                handleSave({ history: updated });
-                                return updated;
-                              });
+                      <button
+                        onClick={() =>
+                          openMediaLibrary((uploadedUrl) => {
+                            setHistoryForm((prev) => {
+                              const updated = { ...prev, bannerUrl: uploadedUrl };
+                              handleSave({ history: updated });
+                              return updated;
                             });
-                          }
-                          e.target.value = '';
-                        }}
-                      />
-                      <label
-                        htmlFor="upload-banner-input"
+                          })
+                        }
                         className="px-4 py-2.5 bg-slate-950 border border-slate-800 hover:border-slate-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
                       >
-                        <Plus size={14} /> Upload Imagem
-                      </label>
+                        <ImageIcon size={14} /> Biblioteca
+                      </button>
                     </div>
                   </div>
 
@@ -1408,7 +1407,7 @@ export default function AdminPanel({
                       </div>
 
                       <div className="space-y-2">
-                        <div className="space-y-0.5">
+                          <div className="space-y-0.5">
                           <label className="text-[9px] font-bold text-slate-500 uppercase">
                             URL do Arquivo de Imagem
                           </label>
@@ -1419,32 +1418,21 @@ export default function AdminPanel({
                               onChange={(e) => handleGalleryChange(idx, 'url', e.target.value)}
                               className="flex-1 bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg px-2 py-1 text-[11px] text-white font-mono focus:outline-none"
                             />
-                            <input
-                              type="file"
-                              accept="image/*"
-                              id={`upload-gallery-input-${item.id}`}
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  handleImageUpload(file, (uploadedUrl) => {
-                                    setGalleryForm((prev) => {
-                                      const updated = [...prev];
-                                      updated[idx] = { ...updated[idx], url: uploadedUrl };
-                                      handleSave({ gallery: updated }); // Auto-save gallery image upload
-                                      return updated;
-                                    });
+                            <button
+                              onClick={() =>
+                                openMediaLibrary((uploadedUrl) => {
+                                  setGalleryForm((prev) => {
+                                    const updated = [...prev];
+                                    updated[idx] = { ...updated[idx], url: uploadedUrl };
+                                    handleSave({ gallery: updated });
+                                    return updated;
                                   });
-                                }
-                                e.target.value = '';
-                              }}
-                            />
-                            <label
-                              htmlFor={`upload-gallery-input-${item.id}`}
-                              className="px-2.5 py-1 bg-slate-900 border border-slate-800 hover:border-slate-700 text-white rounded text-[10px] font-bold cursor-pointer flex items-center gap-1 transition-all whitespace-nowrap"
+                                })
+                              }
+                              className="px-2.5 py-1 bg-slate-900 border border-slate-800 hover:border-slate-700 text-white rounded text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap"
                             >
-                              <Plus size={11} /> Upload
-                            </label>
+                              <ImageIcon size={11} /> Biblioteca
+                            </button>
                           </div>
                         </div>
 
@@ -2054,6 +2042,21 @@ export default function AdminPanel({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Media Library Modal */}
+      <MediaLibraryModal
+        isOpen={mediaLibraryOpen}
+        onClose={() => {
+          setMediaLibraryOpen(false);
+          setMediaLibraryCallback(null);
+        }}
+        onSelect={(url) => {
+          if (mediaLibraryCallback) mediaLibraryCallback(url);
+          setMediaLibraryOpen(false);
+          setMediaLibraryCallback(null);
+        }}
+        token={token}
+      />
 
       {/* Toast notifications */}
       <Toast toasts={toasts} onDismiss={dismissToast} />
