@@ -13,6 +13,7 @@ interface HeaderProps {
   discordUrl: string;
   tiktokUrl: string;
   portalName: string;
+  portalLogo: string;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -27,6 +28,7 @@ const Header: React.FC<HeaderProps> = ({
   discordUrl,
   tiktokUrl,
   portalName,
+  portalLogo,
 }) => {
   const isActive = (paths: string[]) => paths.includes(currentPath);
   const currentDiscordUrl = discordUrl?.trim() || 'https://discord.gg/EwR6fKMYk';
@@ -69,8 +71,12 @@ const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-3 cursor-pointer group shrink-0"
             onClick={() => navigateTo('/')}
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-orange-500 rounded-3xl flex items-center justify-center shadow-xl border border-red-500/30 group-hover:scale-105 transition-transform duration-200">
-              <Shield className="text-white w-6 h-6" />
+            <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-orange-500 rounded-3xl flex items-center justify-center shadow-xl border border-red-500/30 group-hover:scale-105 transition-transform duration-200 overflow-hidden">
+              {portalLogo ? (
+                <img src={portalLogo} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <Shield className="text-white w-6 h-6" />
+              )}
             </div>
             <div>
               <span className="font-mono text-[9px] text-red-400 font-bold tracking-[0.3em] uppercase block leading-none">

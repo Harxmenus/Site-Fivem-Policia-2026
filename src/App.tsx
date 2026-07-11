@@ -386,6 +386,7 @@ export default function App() {
         discordUrl={portalData.discordUrl || ''}
         tiktokUrl={portalData.tiktokUrl || ''}
         portalName={portalData.portalName || 'GTO Tático'}
+        portalLogo={portalData.portalLogo || ''}
       />
 
       {/* CORE WRAPPER */}
@@ -496,6 +497,54 @@ export default function App() {
               >
                 {/* Hero Banner Section */}
                 <HeroBanner history={portalData.history} onNavigate={navigateTo} />
+
+                {/* Missão Tática Section */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-5 shadow-lg shadow-slate-950/40">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
+                          Operações ativas
+                        </p>
+                        <p className="mt-2 text-white font-black">Choque e controle</p>
+                      </div>
+                      <Activity className="text-red-400 shrink-0" size={24} />
+                    </div>
+                    <p className="mt-3 text-slate-400 text-xs leading-relaxed">
+                      Incursões de rápida resposta com presença tática e controle especializado de distúrbios.
+                    </p>
+                  </div>
+
+                  <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-5 shadow-lg shadow-slate-950/40">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
+                          Combate Urbano
+                        </p>
+                        <p className="mt-2 text-white font-black">CQB e patrulhamento</p>
+                      </div>
+                      <Target className="text-red-400 shrink-0" size={24} />
+                    </div>
+                    <p className="mt-3 text-slate-400 text-xs leading-relaxed">
+                      Mobilidade e precisão em ambientes fechados e operações de alto risco.
+                    </p>
+                  </div>
+
+                  <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-5 shadow-lg shadow-slate-950/40">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
+                          Inteligência tática
+                        </p>
+                        <p className="mt-2 text-white font-black">Análise e decisão</p>
+                      </div>
+                      <BarChart3 className="text-red-400 shrink-0" size={24} />
+                    </div>
+                    <p className="mt-3 text-slate-400 text-xs leading-relaxed">
+                      Decisões rápidas com base em inteligência de campo, rota de ação e contenção.
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             )}
 

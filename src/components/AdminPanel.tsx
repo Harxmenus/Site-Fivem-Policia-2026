@@ -74,6 +74,7 @@ export default function AdminPanel({
   const [statisticsForm, setStatisticsForm] = useState<StatisticItem[]>(portalData.statistics);
   const [galleryForm, setGalleryForm] = useState<GalleryItem[]>(portalData.gallery);
   const [portalName, setPortalName] = useState(portalData.portalName || 'GTO Tático');
+  const [portalLogo, setPortalLogo] = useState(portalData.portalLogo || '');
   const [discordWebhook, setDiscordWebhook] = useState(portalData.discordWebhook);
   const [discordUrl, setDiscordUrl] = useState(portalData.discordUrl || '');
   const [tiktokUrl, setTiktokUrl] = useState(portalData.tiktokUrl || '');
@@ -107,6 +108,7 @@ export default function AdminPanel({
     setStatisticsForm(portalData.statistics);
     setGalleryForm(portalData.gallery);
     setPortalName(portalData.portalName || 'GTO Tático');
+    setPortalLogo(portalData.portalLogo || '');
     setDiscordWebhook(portalData.discordWebhook);
     setDiscordUrl(portalData.discordUrl || '');
     setTiktokUrl(portalData.tiktokUrl || '');
@@ -452,8 +454,10 @@ export default function AdminPanel({
 
   const savePortalNameConfig = () => {
     const trimmed = portalName?.trim() || 'GTO Tático';
+    const trimmedLogo = portalLogo?.trim() || '';
     setPortalName(trimmed);
-    handleSave({ portalName: trimmed });
+    setPortalLogo(trimmedLogo);
+    handleSave({ portalName: trimmed, portalLogo: trimmedLogo });
   };
 
   // Password / Admin Config Action
@@ -1722,6 +1726,21 @@ export default function AdminPanel({
                     />
                     <p className="text-[10px] text-slate-500 leading-relaxed">
                       Exibido como "Portal Oficial {'{nome}'}" no cabeçalho do site.
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      URL do Logotipo
+                    </label>
+                    <input
+                      type="text"
+                      value={portalLogo}
+                      onChange={(e) => setPortalLogo(e.target.value)}
+                      placeholder="https://exemplo.com/logo.png"
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none font-mono"
+                    />
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      URL da imagem exibida no círculo ao lado do nome. Deixe vazio para usar o ícone padrão (escudo).
                     </p>
                   </div>
                   <div className="flex justify-end pt-1">

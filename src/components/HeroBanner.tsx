@@ -161,8 +161,8 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
       )}
 
       {/* Content — only shown in non-preview mode */}
-      <div className={`relative z-10 grid grid-cols-1 lg:grid-cols-[1.9fr_1.1fr] ${RESPONSIVE_HEIGHTS}`}>
-        <div className="px-6 md:px-12 py-10 flex flex-col justify-center gap-5">
+      <div className={`relative z-10 ${RESPONSIVE_HEIGHTS}`}>
+        <div className="px-6 md:px-12 py-10 flex flex-col justify-center gap-5 max-w-3xl">
           <motion.span
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -236,68 +236,6 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
           </motion.div>
         </div>
 
-        {/* Right side — mission cards */}
-        <div className="px-6 md:px-10 py-10 flex flex-col justify-between gap-6 bg-slate-950/70 backdrop-blur-xl lg:border-l lg:border-slate-900/60">
-          <div className="space-y-4">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/80 border border-red-700/20 text-red-300 text-[11px] font-semibold uppercase tracking-wider">
-              <Shield size={14} /> Missão Tática
-            </span>
-            <h3 className="text-2xl md:text-3xl font-black text-white leading-tight">
-              Resiliência operacional. Presença imediata.
-            </h3>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              A unidade mantém vigilância permanente no território, pronta para missões de choque,
-              controle de distúrbios e suporte estratégico em todo o cenário urbano.
-            </p>
-          </div>
-
-          <div className="grid gap-4">
-            <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-4 shadow-lg shadow-slate-950/40">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
-                    Operações ativas
-                  </p>
-                  <p className="mt-2 text-white font-black">Choque e controle</p>
-                </div>
-                <Activity className="text-red-400" size={24} />
-              </div>
-              <p className="mt-3 text-slate-400 text-xs leading-relaxed">
-                Incursões de rápida resposta com presença tática e controle especializado de distúrbios.
-              </p>
-            </div>
-
-            <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-4 shadow-lg shadow-slate-950/40">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
-                    Combate Urbano
-                  </p>
-                  <p className="mt-2 text-white font-black">CQB e patrulhamento</p>
-                </div>
-                <Target className="text-red-400" size={24} />
-              </div>
-              <p className="mt-3 text-slate-400 text-xs leading-relaxed">
-                Mobilidade e precisão em ambientes fechados e operações de alto risco.
-              </p>
-            </div>
-
-            <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-4 shadow-lg shadow-slate-950/40">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
-                    Inteligência tática
-                  </p>
-                  <p className="mt-2 text-white font-black">Análise e decisão</p>
-                </div>
-                <BarChart3 className="text-red-400" size={24} />
-              </div>
-              <p className="mt-3 text-slate-400 text-xs leading-relaxed">
-                Decisões rápidas com base em inteligência de campo, rota de ação e contenção.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Loading shimmer */}

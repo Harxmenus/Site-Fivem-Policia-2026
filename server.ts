@@ -320,6 +320,7 @@ const DEFAULT_QUESTIONS = [
 // ---------------------------------------------------------------------------
 const DEFAULT_PORTAL_DATA = {
   portalName: 'GTO Tático',
+  portalLogo: '',
   adminCredentials: {
     username: 'admin',
     // Stored in plain text only until the first successful login, at which
@@ -809,6 +810,10 @@ app.post('/api/content', requireAdmin, async (req, res) => {
       typeof incomingData.portalName === 'string'
         ? incomingData.portalName
         : currentData.portalName,
+    portalLogo:
+      typeof incomingData.portalLogo === 'string'
+        ? incomingData.portalLogo
+        : currentData.portalLogo,
   };
 
   if (
