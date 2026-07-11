@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useCallback, type CSSProperties } from 'react';
 
 const FALLBACK_URL = 'data:image/svg+xml,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">' +
@@ -14,6 +14,9 @@ interface ImageWithFallbackProps {
   wrapperClassName?: string;
   aspectRatio?: string;
   loading?: 'lazy' | 'eager';
+  objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
+  objectPosition?: string;
+  hero?: boolean;
 }
 
 export default function ImageWithFallback({
@@ -23,25 +26,55 @@ export default function ImageWithFallback({
   wrapperClassName = '',
   aspectRatio = 'auto',
   loading = 'lazy',
+  objectFit,
+  objectPosition,
+  hero,
 }: ImageWithFallbackProps) {
   const [imgSrc, setImgSrc] = useState(src);
   const [hasError, setHasError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const handleError = () => {
+  const handleError = useCallback(() => {
     if (!hasError) {
       setHasError(true);
       setImgSrc(FALLBACK_URL);
+      setLoaded(true);
     }
-  };
+  }, [hasError]);
+
+  const handleLoad = useCallback(() => {
+    setLoaded(true);
+  }, []);
+
+  const fitStyle = objectFit ? { objectFit } as CSSProperties : undefined;
+
+  if (hero) {
+    return (
+      <div className={`${wrapperClassName}`} style={{ aspectRatio }}>
+        {!loaded && <div className="absolute inset-0 image-skeleton" />}
+        <img
+          src={imgSrc}
+          alt={alt}
+          loading={loading}
+          onError={handleError}
+          onLoad={handleLoad}
+          className={`${className} ${loaded ? 'img-enter' : 'opacity-0'}`}
+          style={fitStyle}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className={`overflow-hidden ${wrapperClassName}`} style={{ aspectRatio }}>
+    <div className={`relative overflow-hidden ${wrapperClassName} ${!loaded ? 'image-skeleton' : ''}`} style={{ aspectRatio }}>
       <img
         src={imgSrc}
         alt={alt}
         loading={loading}
         onError={handleError}
-        className={className}
+        onLoad={handleLoad}
+        className={`${className} ${loaded ? 'img-enter' : 'opacity-0'}`}
+        style={fitStyle}
       />
     </div>
   );

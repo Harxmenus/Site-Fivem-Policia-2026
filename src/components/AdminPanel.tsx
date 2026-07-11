@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Eye,
@@ -21,26 +21,16 @@ import {
   Check,
   ChevronUp,
   ChevronDown,
-  Shield,
-  Target,
-  Award,
-  Zap,
-  Activity,
-  Lock,
-  Flame,
-  Star,
-  Crosshair,
-  ShieldAlert,
-  UserX,
-  Siren,
 } from 'lucide-react';
-import { PortalData, TimelineEvent, StatisticItem, GalleryItem, QuestionItem } from '../types';
+import { PortalData, TimelineEvent, StatisticItem, GalleryItem } from '../types';
 import ImageWithFallback from './ImageWithFallback';
+import Toast, { useToast } from './Toast';
 
 interface AdminPanelProps {
   onLogout: () => void;
   token: string;
   onRefreshData: () => Promise<void>;
+  onPortalDataUpdated?: (data: PortalData) => void;
   portalData: PortalData;
 }
 
@@ -48,6 +38,7 @@ export default function AdminPanel({
   onLogout,
   token,
   onRefreshData,
+  onPortalDataUpdated,
   portalData,
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<
@@ -94,6 +85,9 @@ export default function AdminPanel({
 
   // Custom delete confirmation state
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
+
+  // Toast
+  const { toasts, show: showToast, dismiss: dismissToast } = useToast();
 
   // Sync state if portalData changes from parent
   useEffect(() => {
@@ -197,20 +191,28 @@ export default function AdminPanel({
         throw new Error(errData.error || 'Erro ao atualizar o conteúdo no servidor.');
       }
 
-      await onRefreshData();
+      // Use response data directly to avoid Blob eventual consistency lag
+      const responseData = await response.json();
+      if (responseData.data && onPortalDataUpdated) {
+        onPortalDataUpdated(responseData.data);
+      } else {
+        await onRefreshData();
+      }
       setSaveSuccess(true);
+      showToast('success', 'Dados salvos e portal atualizado em tempo real!');
       setTimeout(() => setSaveSuccess(false), 3000);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error(err);
       setSaveError(err.message || 'Não foi possível sincronizar com o servidor.');
+      showToast('error', err.message || 'Não foi possível sincronizar com o servidor.');
     } finally {
       setIsSaving(false);
     }
   };
 
   // History Actions
-  const handleHistoryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleHistoryChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setHistoryForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -494,7 +496,7 @@ export default function AdminPanel({
   });
   const [passSuccess, setPassSuccess] = useState(false);
 
-  const savePassword = async (e: React.FormEvent) => {
+  const savePassword = async (e: FormEvent) => {
     e.preventDefault();
     const trimmedUsername = passForm.username.trim();
     const trimmedPassword = passForm.newPassword.trim();
@@ -841,7 +843,8 @@ export default function AdminPanel({
                         <ImageWithFallback
                           src={historyForm.bannerUrl}
                           alt="Preview do banner"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain"
+                          loading="eager"
                         />
                       </div>
                     )}
@@ -1241,7 +1244,7 @@ export default function AdminPanel({
                         <ImageWithFallback
                           src={item.url}
                           alt="preview"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain"
                         />
                       </div>
 
@@ -1892,6 +1895,9 @@ export default function AdminPanel({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Toast notifications */}
+      <Toast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   FileText,
@@ -45,7 +45,7 @@ export default function SelectionProcess({ questions }: SelectionProcessProps) {
     total: number;
   } | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
@@ -66,7 +66,7 @@ export default function SelectionProcess({ questions }: SelectionProcessProps) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const startQuiz = (e: React.FormEvent) => {
+  const startQuiz = (e: FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
       setAnswers(new Array(questions.length).fill(-1));

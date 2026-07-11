@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import Header from './components/Header';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -8,6 +8,7 @@ import {
   Image as ImageIcon,
   Users,
   ChevronRight,
+  ChevronLeft,
   Lock,
   Key,
   Eye,
@@ -31,6 +32,7 @@ import IconRenderer from './components/IconRenderer';
 import ImageWithFallback from './components/ImageWithFallback';
 import SelectionProcess from './components/SelectionProcess';
 import AdminPanel from './components/AdminPanel';
+import Toast from './components/Toast';
 
 export default function App() {
   const [portalData, setPortalData] = useState<PortalData | null>(null);
@@ -77,7 +79,38 @@ export default function App() {
   // Gallery Selected Category
   const [selectedGalleryCategory, setSelectedGalleryCategory] = useState<string>('Todas');
   const [activeAlbum, setActiveAlbum] = useState<string | null>(null);
-  const [galleryLimit, setGalleryLimit] = useState<number>(8);
+  const [galleryLimit, setGalleryLimit] = useState<number>(12);
+
+  const filteredGallery = useMemo(() => {
+    if (!portalData) return [];
+    if (selectedGalleryCategory === 'Todas') return portalData.gallery;
+    return portalData.gallery.filter(
+      (item) => (item.category || 'Patrulhamento') === selectedGalleryCategory
+    );
+  }, [portalData, selectedGalleryCategory]);
+
+  const lightboxGalleryIndex = useMemo(() => {
+    if (!lightboxImg) return -1;
+    return (portalData?.gallery || []).findIndex((item) => item.url === lightboxImg.url);
+  }, [lightboxImg, portalData]);
+
+  const navigateLightbox = (direction: 'prev' | 'next') => {
+    if (!portalData) return;
+    const gallery = portalData.gallery;
+    const currentIdx = lightboxGalleryIndex;
+    if (currentIdx === -1) return;
+    const nextIdx = direction === 'next'
+      ? (currentIdx + 1) % gallery.length
+      : (currentIdx - 1 + gallery.length) % gallery.length;
+    const nextItem = gallery[nextIdx];
+    if (nextItem) {
+      setLightboxImg({
+        url: nextItem.url,
+        caption: nextItem.caption,
+        description: nextItem.description,
+      });
+    }
+  };
 
   // Fetch Portal content
   const fetchPortalData = async () => {
@@ -96,6 +129,11 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Direct update from POST response (avoids Blob read-after-write staleness)
+  const updatePortalData = (data: PortalData) => {
+    setPortalData(data);
   };
 
   useEffect(() => {
@@ -134,6 +172,18 @@ export default function App() {
     setCurrentPath(window.location.pathname);
   }, []);
 
+  // Lightbox keyboard navigation
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (!lightboxImg) return;
+      if (e.key === 'Escape') { e.preventDefault(); setLightboxImg(null); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); navigateLightbox('prev'); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); navigateLightbox('next'); }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [lightboxImg]);
+
   // Monitor routing changes
   const navigateTo = (path: string) => {
     window.history.pushState(null, '', path);
@@ -154,7 +204,7 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoginError('');
     setLoginLoading(true);
@@ -345,6 +395,7 @@ export default function App() {
             onLogout={handleLogout}
             onRefreshData={fetchPortalData}
             portalData={portalData}
+            onPortalDataUpdated={updatePortalData}
           />
         ) : isPathActive(['/admin']) ? (
           /* Dedicated Admin Login Card Page (Instead of modal) */
@@ -442,13 +493,15 @@ export default function App() {
                 className="space-y-8"
               >
                 {/* Hero Banner Section */}
-                <section className="relative rounded-[2rem] overflow-hidden border border-slate-900 shadow-2xl min-h-[600px] lg:min-h-[650px] grid grid-cols-1 lg:grid-cols-[1.9fr_1.1fr] bg-slate-900/10">
+                <section className="relative rounded-[2rem] overflow-hidden border border-slate-900 shadow-2xl min-h-[600px] lg:min-h-[700px] grid grid-cols-1 lg:grid-cols-[1.9fr_1.1fr] bg-slate-900/10">
                   <div className="absolute inset-0 z-0">
                     <ImageWithFallback
                       src={portalData.history.bannerUrl}
                       alt="GTO banner"
-                      className="w-full h-full object-cover object-center"
+                      className="w-full h-full object-contain"
                       wrapperClassName="absolute inset-0"
+                      objectFit="contain"
+                      hero
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/10" />
                     <div className="absolute left-0 top-0 h-full w-full bg-gradient-to-r from-slate-950/95 via-slate-950/30 to-transparent pointer-events-none" />
@@ -686,6 +739,7 @@ export default function App() {
                         src={portalData.history.bannerUrl}
                         alt="GTO Operator"
                         className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                        loading="eager"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
                       <div className="absolute bottom-4 left-5 right-5">
@@ -869,8 +923,8 @@ export default function App() {
                         >
                           {cat === 'Todas'
                             ? portalData.gallery.length
-                            : portalData.gallery.filter(
-                                (item) => (item.category || 'Patrulhamento') === cat
+                            : portalData.gallery.filter((item) =>
+                                (item.category || 'Patrulhamento').toLowerCase() === cat.toLowerCase()
                               ).length}
                         </span>
                       </button>
@@ -880,123 +934,109 @@ export default function App() {
 
                 {/* Images Grid */}
                 <div className="space-y-8">
-                  {(() => {
-                    const filtered =
-                      selectedGalleryCategory === 'Todas'
-                        ? portalData.gallery
-                        : portalData.gallery.filter(
-                            (item) => (item.category || 'Patrulhamento') === selectedGalleryCategory
-                          );
-
-                    if (filtered.length === 0) {
-                      return (
-                        <div className="border border-dashed border-slate-900 rounded-3xl p-16 text-center max-w-lg mx-auto space-y-4 bg-slate-900/10">
-                          <div className="w-14 h-14 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-500 mx-auto">
-                            <Folder size={24} />
-                          </div>
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-bold text-white uppercase">
-                              Nenhum Registro
-                            </h4>
-                            <p className="text-slate-400 text-xs">
-                              Nenhum registro fotográfico nesta categoria no momento.
-                            </p>
-                          </div>
-                          <p className="text-[10px] text-slate-600">
-                            Novas mídias podem ser enviadas e marcadas com esta categoria através do
-                            painel de controle administrativo.
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <>
-                        <motion.div
-                          layout
-                          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                        >
-                          <AnimatePresence mode="popLayout">
-                            {filtered.slice(0, galleryLimit).map((item, idx) => (
-                              <motion.div
-                                key={item.id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.92, y: 15 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.92, y: 15 }}
-                                transition={{ duration: 0.3 }}
-                                whileHover={{
-                                  scale: 1.04,
-                                  y: -6,
-                                  transition: { duration: 0.2, ease: 'easeInOut' },
-                                }}
-                                onClick={() =>
-                                  setLightboxImg({
-                                    url: item.url,
-                                    caption: item.caption,
-                                    description: item.description,
-                                  })
-                                }
-                                className="group bg-slate-900/20 border border-slate-900 hover:border-red-500/30 rounded-3xl overflow-hidden shadow-lg cursor-pointer transition-all relative flex flex-col justify-between"
-                              >
-                                {/* Category and Badge overlay */}
-                                <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
-                                  <span className="px-2.5 py-1 bg-slate-950/90 backdrop-blur-md border border-slate-800 text-slate-300 rounded-xl text-[9px] font-mono font-bold uppercase tracking-wider">
-                                    {item.category || 'Patrulhamento'}
-                                  </span>
-                                </div>
-
-                                <div className="absolute top-3 right-3 z-10 bg-slate-950/90 backdrop-blur-md border border-red-500/30 text-red-500 p-1.5 rounded-xl shadow-lg flex items-center justify-center transition-all group-hover:bg-red-600 group-hover:text-white group-hover:border-red-500">
-                                  <IconRenderer name={item.badgeIcon || 'Shield'} size={12} />
-                                </div>
-
-                                <div className="aspect-[4/3] overflow-hidden bg-slate-950 relative">
-                                  <ImageWithFallback
-                                    src={item.url}
-                                    alt={item.caption}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                  />
-                                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                                    <span className="text-[10px] font-mono text-red-400 font-bold bg-slate-950/95 border border-red-900/40 px-2.5 py-1 rounded">
-                                      Ampliar Registro +
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div className="p-5 space-y-1.5 bg-slate-950/10 border-t border-slate-900/30 flex-1 flex flex-col justify-between">
-                                  <div className="space-y-1.5">
-                                    <h4 className="text-xs font-bold text-white uppercase tracking-wide group-hover:text-red-400 transition-colors">
-                                      {item.caption}
-                                    </h4>
-                                    {item.description && (
-                                      <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">
-                                        {item.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <span className="text-[9px] font-mono text-slate-500 mt-2 block border-t border-slate-900/20 pt-1.5">
-                                    📅 {item.date}
-                                  </span>
-                                </div>
-                              </motion.div>
-                            ))}
-                          </AnimatePresence>
-                        </motion.div>
-
-                        {/* Show More Expansion Button */}
-                        {filtered.length > galleryLimit && (
-                          <div className="flex justify-center pt-4">
-                            <button
-                              onClick={() => setGalleryLimit((prev) => prev + 12)}
-                              className="px-6 py-3 bg-slate-900 hover:bg-slate-850 text-white rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all border border-slate-850 flex items-center gap-2 cursor-pointer shadow-lg hover:border-red-500/30"
+                  {filteredGallery.length === 0 ? (
+                    <div className="border border-dashed border-slate-900 rounded-3xl p-16 text-center max-w-lg mx-auto space-y-4 bg-slate-900/10">
+                      <div className="w-14 h-14 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-500 mx-auto">
+                        <Folder size={24} />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-bold text-white uppercase">
+                          Nenhum Registro
+                        </h4>
+                        <p className="text-slate-400 text-xs">
+                          Nenhum registro fotográfico nesta categoria no momento.
+                        </p>
+                      </div>
+                      <p className="text-[10px] text-slate-600">
+                        Novas mídias podem ser enviadas e marcadas com esta categoria através do
+                        painel de controle administrativo.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <motion.div
+                        layout
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                      >
+                        <AnimatePresence mode="popLayout">
+                          {filteredGallery.slice(0, galleryLimit).map((item) => (
+                            <motion.div
+                              key={item.id}
+                              layout
+                              initial={{ opacity: 0, scale: 0.92, y: 15 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.92, y: 15 }}
+                              transition={{ duration: 0.3 }}
+                              whileHover={{
+                                scale: 1.04,
+                                y: -6,
+                                transition: { duration: 0.2, ease: 'easeInOut' },
+                              }}
+                              onClick={() =>
+                                setLightboxImg({
+                                  url: item.url,
+                                  caption: item.caption,
+                                  description: item.description,
+                                })
+                              }
+                              className="group bg-slate-900/20 border border-slate-900 hover:border-red-500/30 rounded-3xl overflow-hidden shadow-lg cursor-pointer transition-all relative flex flex-col justify-between"
                             >
-                              Carregar Mais Registros (+{filtered.length - galleryLimit})
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
+                              <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+                                <span className="px-2.5 py-1 bg-slate-950/90 backdrop-blur-md border border-slate-800 text-slate-300 rounded-xl text-[9px] font-mono font-bold uppercase tracking-wider">
+                                  {item.category || 'Patrulhamento'}
+                                </span>
+                              </div>
+
+                              <div className="absolute top-3 right-3 z-10 bg-slate-950/90 backdrop-blur-md border border-red-500/30 text-red-500 p-1.5 rounded-xl shadow-lg flex items-center justify-center transition-all group-hover:bg-red-600 group-hover:text-white group-hover:border-red-500">
+                                <IconRenderer name={item.badgeIcon || 'Shield'} size={12} />
+                              </div>
+
+                              <div className="aspect-[4/3] overflow-hidden bg-slate-950 relative">
+                                <ImageWithFallback
+                                  src={item.url}
+                                  alt={item.caption}
+                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                                  <span className="text-[10px] font-mono text-red-400 font-bold bg-slate-950/95 border border-red-900/40 px-2.5 py-1 rounded">
+                                    Ampliar Registro +
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="p-5 space-y-1.5 bg-slate-950/10 border-t border-slate-900/30 flex-1 flex flex-col justify-between">
+                                <div className="space-y-1.5">
+                                  <h4 className="text-xs font-bold text-white uppercase tracking-wide group-hover:text-red-400 transition-colors">
+                                    {item.caption}
+                                  </h4>
+                                  {item.description && (
+                                    <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">
+                                      {item.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <span className="text-[9px] font-mono text-slate-500 mt-2 block border-t border-slate-900/20 pt-1.5">
+                                  📅 {item.date}
+                                </span>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </motion.div>
+
+                      {/* Show More Expansion Button */}
+                      {filteredGallery.length > galleryLimit && (
+                        <div className="flex justify-center pt-4">
+                          <button
+                            onClick={() => setGalleryLimit((prev) => prev + 12)}
+                            className="px-6 py-3 bg-slate-900 hover:bg-slate-850 text-white rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all border border-slate-850 flex items-center gap-2 cursor-pointer shadow-lg hover:border-red-500/30"
+                          >
+                            Carregar Mais Registros (+{filteredGallery.length - galleryLimit})
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -1120,23 +1160,46 @@ export default function App() {
       <AnimatePresence>
         {lightboxImg && (
           <div
-            className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4"
+            className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4"
             onClick={() => setLightboxImg(null)}
           >
-            <div className="absolute top-4 right-4 text-white text-sm cursor-pointer bg-slate-900 border border-slate-800 hover:border-red-500 hover:text-red-400 p-2.5 rounded-full transition-all">
-              ✕ Fechar [ESC]
+            <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+              <span className="text-[10px] text-slate-500 font-mono bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800">
+                {lightboxGalleryIndex + 1} / {portalData?.gallery.length || 0}
+              </span>
+              <button
+                onClick={() => setLightboxImg(null)}
+                className="text-white text-sm cursor-pointer bg-slate-900 border border-slate-800 hover:border-red-500 hover:text-red-400 p-2.5 rounded-full transition-all"
+              >
+                <X size={16} />
+              </button>
             </div>
 
             <div
-              className="max-w-4xl max-h-[80vh] flex flex-col items-center justify-center relative rounded-xl overflow-hidden border border-slate-900 shadow-2xl bg-slate-950"
+              className="max-w-5xl max-h-[85vh] w-full flex flex-col items-center justify-center relative rounded-xl overflow-hidden border border-slate-900 shadow-2xl bg-slate-950"
               onClick={(e) => e.stopPropagation()}
             >
               <ImageWithFallback
                 src={lightboxImg.url}
                 alt="Lightbox view"
                 className="max-w-full max-h-[70vh] object-contain"
-                wrapperClassName="flex items-center justify-center"
+                wrapperClassName="flex items-center justify-center p-2 sm:p-4"
               />
+
+              {/* Navigation arrows */}
+              <button
+                onClick={(e) => { e.stopPropagation(); navigateLightbox('prev'); }}
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-slate-950/80 hover:bg-red-600 border border-slate-800 hover:border-red-500 text-white p-2.5 sm:p-3 rounded-full transition-all shadow-lg opacity-60 hover:opacity-100 cursor-pointer"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); navigateLightbox('next'); }}
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-slate-950/80 hover:bg-red-600 border border-slate-800 hover:border-red-500 text-white p-2.5 sm:p-3 rounded-full transition-all shadow-lg opacity-60 hover:opacity-100 cursor-pointer"
+              >
+                <ChevronRight size={20} />
+              </button>
+
               <div className="p-5 bg-slate-950 border-t border-slate-900 w-full text-center space-y-1.5">
                 <p className="text-sm text-white font-bold uppercase tracking-wide">
                   {lightboxImg.caption}
