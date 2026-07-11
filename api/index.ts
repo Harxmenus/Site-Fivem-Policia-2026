@@ -508,7 +508,12 @@ async function readBlobData(): Promise<any | null> {
     const { blobs } = await list({ prefix: BLOB_DATA_FILENAME, token: process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN });
     const match = blobs.find((b) => b.pathname === BLOB_DATA_FILENAME);
     if (!match) return null;
-    const response = await fetch(match.url);
+    // Add cache-busting query param so the Vercel Blob CDN never serves a
+    // stale cached version after we've overwritten the file.
+    const bustUrl = `${match.url}?t=${Date.now()}`;
+    const response = await fetch(bustUrl, {
+      headers: { 'Cache-Control': 'no-cache, no-store' },
+    });
     if (!response.ok) return null;
     return await response.json();
   } catch (err) {
@@ -528,6 +533,7 @@ async function writeBlobData(data: any): Promise<boolean> {
       contentType: 'application/json',
       addRandomSuffix: false,
       allowOverwrite: true,
+      cacheControlMaxAge: 0, // Prevent CDN from caching — always return fresh data
       token,
     });
     return true;
