@@ -1,4 +1,4 @@
-import { useState, useCallback, type CSSProperties } from 'react';
+import { useState, useEffect, useCallback, type CSSProperties } from 'react';
 
 const FALLBACK_URL = 'data:image/svg+xml,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">' +
@@ -33,6 +33,13 @@ export default function ImageWithFallback({
   const [imgSrc, setImgSrc] = useState(src);
   const [hasError, setHasError] = useState(false);
   const [loaded, setLoaded] = useState(false);
+
+  // Sync when the src prop changes (e.g. user types new URL in admin panel)
+  useEffect(() => {
+    setImgSrc(src);
+    setHasError(false);
+    setLoaded(false);
+  }, [src]);
 
   const handleError = useCallback(() => {
     if (!hasError) {
