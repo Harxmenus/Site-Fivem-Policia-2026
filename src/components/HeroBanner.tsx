@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Shield, ChevronRight, Activity, Target, BarChart3 } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { HistoryConfig } from '../types';
 
 interface HeroBannerProps {
@@ -161,66 +161,45 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
       )}
 
       {/* Content — only shown in non-preview mode */}
-      <div className={`relative z-10 ${RESPONSIVE_HEIGHTS}`}>
-        <div className="px-6 md:px-12 py-10 flex flex-col justify-center gap-5 max-w-3xl">
-          <motion.span
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-3 py-1 text-[10px] uppercase font-bold font-mono tracking-[0.35em] bg-red-600/90 text-white rounded-full shadow-lg shadow-red-950/20 w-fit"
-          >
-            UNIDADE TÁTICA DE PRONTO EMPREGO
-          </motion.span>
+      <div className={`relative z-10 ${RESPONSIVE_HEIGHTS} flex flex-col`}>
+        <div className="flex-1 px-6 md:px-12 py-10 flex flex-col justify-center">
+          <div className="max-w-3xl space-y-4">
+            <motion.span
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="inline-flex items-center gap-2 px-3 py-1 text-[10px] uppercase font-bold font-mono tracking-[0.35em] bg-red-600/90 text-white rounded-full shadow-lg shadow-red-950/20 w-fit"
+            >
+              UNIDADE TÁTICA DE PRONTO EMPREGO
+            </motion.span>
 
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="text-4xl md:text-6xl xl:text-7xl font-black tracking-tight text-white leading-[0.95] max-w-3xl"
-          >
-            {history.title}
-          </motion.h2>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="text-4xl md:text-6xl xl:text-7xl font-black tracking-tight text-white leading-[0.95]"
+            >
+              {history.title}
+            </motion.h2>
 
-          <motion.p
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-red-500 font-mono text-xs md:text-sm font-bold tracking-widest uppercase"
-          >
-            {history.subtitle}
-          </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-red-500 font-mono text-xs md:text-sm font-bold tracking-widest uppercase"
+            >
+              {history.subtitle}
+            </motion.p>
+          </div>
+        </div>
 
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.25 }}
-            className="border-l-4 border-red-600 pl-4 py-3 bg-slate-950/45 backdrop-blur-sm rounded-r-2xl pr-4 max-w-xl"
-          >
-            <p className="font-mono text-base md:text-lg font-black text-red-500 tracking-wider animate-pulse italic uppercase">
-              "Hope, senhores. Hope, pra cima."
-            </p>
-            <p className="text-[10px] text-slate-300 font-mono uppercase tracking-widest mt-1">
-              União • Honra • Disciplina
-            </p>
-          </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-slate-300 text-sm md:text-base leading-relaxed max-w-2xl"
-          >
-            Força especializada e ostensiva de choque destinada ao reestabelecimento da ordem
-            pública, controle tático de distúrbios, combate urbano (CQB) e missões especiais de
-            altíssimo risco.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="flex flex-wrap gap-3 pt-2"
-          >
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="px-6 md:px-12 pb-8 flex justify-end"
+        >
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={() => onNavigate?.('/processo-seletivo')}
               className="px-6 py-3.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs uppercase tracking-wider rounded-3xl transition-all shadow-lg shadow-red-950/35 flex items-center gap-2 cursor-pointer"
@@ -233,9 +212,8 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
             >
               Nossa História
             </button>
-          </motion.div>
-        </div>
-
+          </div>
+        </motion.div>
       </div>
 
       {/* Loading shimmer */}

@@ -498,6 +498,16 @@ export default function App() {
                 {/* Hero Banner Section */}
                 <HeroBanner history={portalData.history} onNavigate={navigateTo} />
 
+                {/* Quote Section — below banner */}
+                <div className="border-l-4 border-red-600 pl-5 py-4 max-w-2xl">
+                  <p className="font-mono text-lg md:text-xl font-black text-red-500 tracking-wider italic">
+                    "Hope, senhores. Hope, pra cima."
+                  </p>
+                  <p className="text-[11px] text-slate-400 font-mono uppercase tracking-widest mt-1.5">
+                    União • Honra • Disciplina
+                  </p>
+                </div>
+
                 {/* Missão Tática Section */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-5 shadow-lg shadow-slate-950/40">
