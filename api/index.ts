@@ -502,23 +502,30 @@ function writeLocalData(data: any): boolean {
 // We do not use an in-memory cache for blob data because serverless instances
 // do not share memory. Using a local cache causes stale data for users.
 
-async function readBlobData(): Promise<any | null> {
+// Discriminated result so callers can distinguish "file not found" from
+// "read error" — critical to avoid overwriting saved data on transient errors.
+type BlobReadResult =
+  | { status: 'ok'; data: any }
+  | { status: 'not_found' }
+  | { status: 'error'; err: unknown };
+
+async function readBlobData(): Promise<BlobReadResult> {
   try {
-    // List blobs to find ours
-    const { blobs } = await list({ prefix: BLOB_DATA_FILENAME, token: process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN });
+    const token = process.env.MY_BLOB_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+    const { blobs } = await list({ prefix: BLOB_DATA_FILENAME, token });
     const match = blobs.find((b) => b.pathname === BLOB_DATA_FILENAME);
-    if (!match) return null;
-    // Add cache-busting query param so the Vercel Blob CDN never serves a
-    // stale cached version after we've overwritten the file.
+    if (!match) return { status: 'not_found' };
+    // Cache-busting: prevent Vercel CDN from serving a stale version
     const bustUrl = `${match.url}?t=${Date.now()}`;
     const response = await fetch(bustUrl, {
       headers: { 'Cache-Control': 'no-cache, no-store' },
     });
-    if (!response.ok) return null;
-    return await response.json();
+    if (!response.ok) return { status: 'error', err: new Error(`HTTP ${response.status}`) };
+    const data = await response.json();
+    return { status: 'ok', data };
   } catch (err) {
     console.error('Error reading blob data:', err);
-    return null;
+    return { status: 'error', err };
   }
 }
 
@@ -595,26 +602,40 @@ async function applyMigrations(data: any): Promise<{ data: any; updated: boolean
 async function getPortalData(): Promise<any> {
   // ── Local dev ──────────────────────────────────────────────────────────────
   if (!hasBlobConfig()) {
+    console.warn(
+      '[WARN] No BLOB_READ_WRITE_TOKEN configured. Using local data.json (data will reset on each deploy).' +
+      ' Set BLOB_READ_WRITE_TOKEN in your Vercel project environment variables to persist data.'
+    );
     const local = readLocalData();
     return local ?? cloneDefault(DEFAULT_PORTAL_DATA);
   }
 
   // ── Production: Vercel Blob ────────────────────────────────────────────────
+  const result = await readBlobData();
+
+  if (result.status === 'not_found') {
+    // First run: blob file doesn't exist yet → seed with defaults and save.
+    console.log('[BLOB] portal-data.json not found, seeding with defaults.');
+    const data = cloneDefault(DEFAULT_PORTAL_DATA);
+    await writeBlobData(data);
+    return data;
+  }
+
+  if (result.status === 'error') {
+    // Transient read error: return defaults IN MEMORY only — NEVER overwrite
+    // the saved blob, or we'd erase all user data on a bad network request.
+    console.error('[BLOB] Read error — returning in-memory defaults WITHOUT overwriting saved data.');
+    return cloneDefault(DEFAULT_PORTAL_DATA);
+  }
+
+  // status === 'ok'
   try {
-
-    let data = await readBlobData();
-    if (!data) {
-      data = cloneDefault(DEFAULT_PORTAL_DATA);
-      await writeBlobData(data);
-      return data;
-    }
-
-    const { data: migrated, updated } = await applyMigrations(data);
+    const { data: migrated, updated } = await applyMigrations(result.data);
     if (updated) await writeBlobData(migrated);
     return migrated;
   } catch (error) {
-    console.error('Error reading portal data, returning default fallback:', error);
-    return cloneDefault(DEFAULT_PORTAL_DATA);
+    console.error('Error applying migrations, returning unmodified data:', error);
+    return result.data;
   }
 }
 
