@@ -14,8 +14,11 @@ export interface HistoryConfig {
   mission?: string;
   values?: string;
   bannerFit?: 'cover' | 'contain' | 'auto';
-  bannerPosition?: string;
+  bannerPositionH?: string;
+  bannerPositionV?: string;
   bannerHeight?: number;
+  bannerOverlay?: number;
+  bannerBlur?: number;
 }
 
 export interface TimelineEvent {

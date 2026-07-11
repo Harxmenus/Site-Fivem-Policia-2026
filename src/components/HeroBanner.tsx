@@ -1,51 +1,55 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Shield, ChevronRight, Activity, Target, BarChart3 } from 'lucide-react';
 import type { HistoryConfig } from '../types';
 
 interface HeroBannerProps {
   history: HistoryConfig;
-  onNavigate: (path: string) => void;
+  onNavigate?: (path: string) => void;
+  preview?: boolean;
 }
 
+type BannerFit = 'cover' | 'contain';
 type LoadState = 'loading' | 'loaded' | 'error';
 
-function resolveFit(
+function computeFit(
   configFit: string | undefined,
-  imgWidth: number,
-  imgHeight: number
-): 'cover' | 'contain' {
-  if (configFit && configFit !== 'auto') return configFit as 'cover' | 'contain';
-  const aspect = imgWidth / imgHeight;
-  if (aspect > 1.8) return 'contain';
-  if (aspect < 0.8) return 'contain';
-  return 'cover';
-}
-
-function resolvePosition(configPos: string | undefined): string {
-  if (configPos) return configPos;
-  return 'center center';
-}
-
-function resolveHeight(configHeight: number | undefined): string {
-  if (configHeight && configHeight >= 30 && configHeight <= 120) {
-    return `${configHeight}vh`;
+  w: number,
+  h: number
+): BannerFit {
+  if (!configFit || configFit === 'auto') {
+    const aspect = w / h;
+    if (aspect > 1.6) return 'contain';
+    if (aspect < 0.8) return 'contain';
+    return 'cover';
   }
-  return 'auto';
+  return configFit as BannerFit;
 }
+
+function computePosition(h: string | undefined, v: string | undefined): string {
+  const x = h || 'center';
+  const y = v || 'center';
+  return `${x} ${y}`;
+}
+
+const RESPONSIVE_HEIGHTS = 'min-h-[420px] sm:min-h-[500px] md:min-h-[560px] lg:min-h-[650px] xl:min-h-[700px]';
 
 export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
-  const imgRef = useRef<HTMLImageElement>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
-  const [imgNatural, setImgNatural] = useState({ w: 0, h: 0 });
-  const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover');
-
+  const [imgNatural, setImgNatural] = useState({ w: 1920, h: 800 });
+  const [fitMode, setFitMode] = useState<BannerFit>('cover');
   const [imgLoaded, setImgLoaded] = useState(false);
 
+  // Image dimensions derived
+  const aspectRatio = useMemo(() => {
+    if (imgNatural.h === 0) return 2.4;
+    return imgNatural.w / imgNatural.h;
+  }, [imgNatural]);
+
+  // Load image once when URL changes
   useEffect(() => {
     setLoadState('loading');
     setImgLoaded(false);
-    setImgNatural({ w: 0, h: 0 });
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -54,7 +58,7 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
       const w = img.naturalWidth;
       const h = img.naturalHeight;
       setImgNatural({ w, h });
-      setFitMode(resolveFit(history.bannerFit, w, h));
+      setFitMode(computeFit(history.bannerFit, w, h));
       setLoadState('loaded');
       setImgLoaded(true);
     };
@@ -62,54 +66,81 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
     img.onerror = () => {
       setLoadState('error');
       setFitMode(history.bannerFit === 'contain' ? 'contain' : 'cover');
+      setImgLoaded(true);
     };
 
     img.src = history.bannerUrl;
-  }, [history.bannerUrl, history.bannerFit]);
+  }, [history.bannerUrl]);
 
-  const pos = resolvePosition(history.bannerPosition);
-  const height = resolveHeight(history.bannerHeight);
+  // Recompute fit when config changes (without re-loading the image)
+  useEffect(() => {
+    if (loadState === 'loaded') {
+      setFitMode(computeFit(history.bannerFit, imgNatural.w, imgNatural.h));
+    }
+  }, [history.bannerFit, loadState]);
+
+  const pos = useMemo(
+    () => computePosition(history.bannerPositionH, history.bannerPositionV),
+    [history.bannerPositionH, history.bannerPositionV]
+  );
+
+  const adminHeight = history.bannerHeight;
+  const useAdminHeight = adminHeight && adminHeight >= 30 && adminHeight <= 120;
   const isContain = fitMode === 'contain';
+
+  // Overlay darkness
+  const overlayOpacity = history.bannerOverlay ?? 60;
+  const overlayAlpha = Math.max(0, Math.min(100, overlayOpacity)) / 100;
+
+  // Blur intensity
+  const blurPx = history.bannerBlur ?? 32;
+  const blurAmount = isContain ? Math.max(0, blurPx) : 0;
 
   return (
     <section
-      className="relative rounded-[2rem] overflow-hidden border border-slate-900 shadow-2xl w-full"
-      style={{ minHeight: height !== 'auto' ? height : undefined }}
+      className={`relative rounded-[2rem] overflow-hidden border border-slate-900 shadow-2xl w-full ${useAdminHeight ? '' : RESPONSIVE_HEIGHTS}`}
+      style={useAdminHeight ? { minHeight: `${adminHeight}vh` } : undefined}
     >
+      {/* Skeleton loader */}
       {loadState === 'loading' && (
-        <div className="w-full min-h-[400px] sm:min-h-[500px] lg:min-h-[550px] image-skeleton" />
+        <div className={`w-full image-skeleton ${RESPONSIVE_HEIGHTS}`} />
       )}
 
       {loadState !== 'loading' && (
         <>
-          {/* Blurred background layer — always cover to fill space */}
+          {/* Blurred background for contain mode */}
           <div
             className="absolute inset-0 z-0 bg-slate-950"
             style={{
-              backgroundImage: loadState === 'loaded' ? `url(${history.bannerUrl})` : undefined,
+              backgroundImage: `url(${history.bannerUrl})`,
               backgroundSize: 'cover',
               backgroundPosition: pos,
-              filter: isContain ? 'blur(32px)' : 'none',
-              opacity: isContain ? 0.4 : 0,
-              transform: isContain ? 'scale(1.2)' : 'none',
-              transition: 'opacity 0.6s ease, filter 0.6s ease',
+              filter: blurAmount > 0 ? `blur(${blurAmount}px)` : 'none',
+              opacity: isContain ? 0.5 : 0,
+              transform: isContain ? 'scale(1.15)' : 'none',
+              transition: 'opacity 0.5s ease, filter 0.5s ease',
             }}
           />
 
-          {/* Dark gradient overlays */}
-          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent" />
-          <div className="absolute left-0 top-0 h-full w-full z-[1] bg-gradient-to-r from-slate-950/95 via-slate-950/40 to-transparent pointer-events-none" />
+          {/* Gradient overlay — uses the admin darkness setting */}
+          <div
+            className="absolute inset-0 z-[1] pointer-events-none"
+            style={{
+              background: `linear-gradient(to top, rgba(2,6,23,${overlayAlpha}) 0%, rgba(2,6,23,${overlayAlpha * 0.5}) 40%, transparent 100%)`,
+            }}
+          />
+          <div
+            className="absolute left-0 top-0 h-full w-full z-[1] pointer-events-none"
+            style={{
+              background: `linear-gradient(to right, rgba(2,6,23,${Math.min(1, overlayAlpha + 0.3)}) 0%, rgba(2,6,23,${overlayAlpha * 0.2}) 50%, transparent 100%)`,
+            }}
+          />
 
           {/* Main image */}
-          <div
-            className="absolute inset-0 z-[1] flex items-center justify-center"
-            style={{ minHeight: 'inherit' }}
-          >
+          <div className="absolute inset-0 z-[1] flex items-center justify-center">
             <img
-              ref={imgRef}
               src={history.bannerUrl}
               alt="GTO banner"
-              onLoad={() => {}}
               className={`w-full h-full transition-all duration-700 ease-out ${
                 imgLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
               }`}
@@ -123,8 +154,8 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
         </>
       )}
 
-      {/* Content */}
-      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.9fr_1.1fr] min-h-[400px] sm:min-h-[500px] lg:min-h-[550px]">
+      {/* Content — only shown in non-preview mode */}
+      <div className={`relative z-10 grid grid-cols-1 lg:grid-cols-[1.9fr_1.1fr] ${RESPONSIVE_HEIGHTS}`}>
         <div className="px-6 md:px-12 py-10 flex flex-col justify-center gap-5">
           <motion.span
             initial={{ opacity: 0, y: 10 }}
@@ -185,13 +216,13 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
             className="flex flex-wrap gap-3 pt-2"
           >
             <button
-              onClick={() => onNavigate('/processo-seletivo')}
+              onClick={() => onNavigate?.('/processo-seletivo')}
               className="px-6 py-3.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs uppercase tracking-wider rounded-3xl transition-all shadow-lg shadow-red-950/35 flex items-center gap-2 cursor-pointer"
             >
               Processo Seletivo <ChevronRight size={14} />
             </button>
             <button
-              onClick={() => onNavigate('/historia')}
+              onClick={() => onNavigate?.('/historia')}
               className="px-6 py-3.5 bg-slate-900/80 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-xs uppercase tracking-wider rounded-3xl transition-all shadow-sm border border-slate-800 flex items-center gap-2 cursor-pointer"
             >
               Nossa História
@@ -199,7 +230,7 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
           </motion.div>
         </div>
 
-        {/* Right side: mission cards */}
+        {/* Right side — mission cards */}
         <div className="px-6 md:px-10 py-10 flex flex-col justify-between gap-6 bg-slate-950/70 backdrop-blur-xl lg:border-l lg:border-slate-900/60">
           <div className="space-y-4">
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/80 border border-red-700/20 text-red-300 text-[11px] font-semibold uppercase tracking-wider">
@@ -263,7 +294,7 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
         </div>
       </div>
 
-      {/* Loading shimmer overlay */}
+      {/* Loading shimmer */}
       {!imgLoaded && loadState !== 'loading' && (
         <div className="absolute inset-0 z-20 image-skeleton" />
       )}

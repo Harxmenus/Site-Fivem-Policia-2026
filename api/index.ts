@@ -363,8 +363,11 @@ const DEFAULT_PORTAL_DATA = {
     bannerUrl:
       'https://images.unsplash.com/photo-1508847154043-be12a327dc6f?q=80&w=1200&auto=format&fit=crop',
     bannerFit: 'auto',
-    bannerPosition: 'center center',
-    bannerHeight: 80,
+    bannerPositionH: 'center',
+    bannerPositionV: 'center',
+    bannerHeight: 0,
+    bannerOverlay: 60,
+    bannerBlur: 32,
   },
   timeline: [
     {
