@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Shield, ChevronRight, Activity, Target, BarChart3 } from 'lucide-react';
 import type { HistoryConfig } from '../types';
@@ -35,21 +35,27 @@ function computePosition(h: string | undefined, v: string | undefined): string {
 const RESPONSIVE_HEIGHTS = 'min-h-[420px] sm:min-h-[500px] md:min-h-[560px] lg:min-h-[650px] xl:min-h-[700px]';
 
 export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
-  const [loadState, setLoadState] = useState<LoadState>('loading');
+  const [loadState, setLoadState] = useState<LoadState>('loaded');
   const [imgNatural, setImgNatural] = useState({ w: 1920, h: 800 });
   const [fitMode, setFitMode] = useState<BannerFit>('cover');
   const [imgLoaded, setImgLoaded] = useState(false);
+  const prevUrlRef = useRef(history.bannerUrl);
 
-  // Image dimensions derived
   const aspectRatio = useMemo(() => {
     if (imgNatural.h === 0) return 2.4;
     return imgNatural.w / imgNatural.h;
   }, [imgNatural]);
 
-  // Load image once when URL changes
+  // Load image in background — never flash the skeleton on mount,
+  // only show it briefly when the URL actually changes.
   useEffect(() => {
-    setLoadState('loading');
-    setImgLoaded(false);
+    const isNewUrl = history.bannerUrl !== prevUrlRef.current;
+    prevUrlRef.current = history.bannerUrl;
+
+    if (isNewUrl) {
+      setLoadState('loading');
+      setImgLoaded(false);
+    }
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
