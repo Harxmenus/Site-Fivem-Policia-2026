@@ -197,7 +197,7 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="px-6 md:px-12 pb-8 flex justify-end"
+          className="px-6 md:px-12 pb-8 flex justify-center"
         >
           <div className="flex flex-wrap gap-3">
             <button
