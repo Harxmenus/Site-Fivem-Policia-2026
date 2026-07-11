@@ -499,8 +499,8 @@ export default function App() {
                 <HeroBanner history={portalData.history} onNavigate={navigateTo} />
 
                 {/* Quote Section — below banner */}
-                <div className="border-l-4 border-red-600 pl-5 py-4 max-w-2xl">
-                  <p className="font-mono text-lg md:text-xl font-black text-red-500 tracking-wider italic">
+                <div className="border-l-4 border-amber-500/60 pl-5 py-4 max-w-2xl">
+                  <p className="font-mono text-lg md:text-xl font-black text-amber-400 tracking-wider italic">
                     "Hope, senhores. Hope, pra cima."
                   </p>
                   <p className="text-[11px] text-slate-400 font-mono uppercase tracking-widest mt-1.5">
@@ -510,7 +510,8 @@ export default function App() {
 
                 {/* Missão Tática Section */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-5 shadow-lg shadow-slate-950/40">
+                  <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-5 shadow-lg shadow-slate-950/40 tactical-corners-4">
+                    <span className="corner-tl" /><span className="corner-tr" /><span className="corner-bl" /><span className="corner-br" />
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
@@ -525,7 +526,8 @@ export default function App() {
                     </p>
                   </div>
 
-                  <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-5 shadow-lg shadow-slate-950/40">
+                  <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-5 shadow-lg shadow-slate-950/40 tactical-corners-4">
+                    <span className="corner-tl" /><span className="corner-tr" /><span className="corner-bl" /><span className="corner-br" />
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">
@@ -540,7 +542,8 @@ export default function App() {
                     </p>
                   </div>
 
-                  <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-5 shadow-lg shadow-slate-950/40">
+                  <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-5 shadow-lg shadow-slate-950/40 tactical-corners-4">
+                    <span className="corner-tl" /><span className="corner-tr" /><span className="corner-bl" /><span className="corner-br" />
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">

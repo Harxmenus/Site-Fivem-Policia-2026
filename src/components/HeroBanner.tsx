@@ -104,13 +104,29 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
 
   return (
     <section
-      className={`relative rounded-[2rem] overflow-hidden border border-slate-900 shadow-2xl w-full ${useAdminHeight ? '' : RESPONSIVE_HEIGHTS}`}
+      className={`relative rounded-[2rem] overflow-hidden border border-slate-900 shadow-2xl w-full noise-overlay ${useAdminHeight ? '' : RESPONSIVE_HEIGHTS}`}
       style={useAdminHeight ? { minHeight: `${adminHeight}vh` } : undefined}
     >
       {/* Skeleton loader */}
       {loadState === 'loading' && (
         <div className={`w-full image-skeleton ${RESPONSIVE_HEIGHTS}`} />
       )}
+
+      {/* Crosshair decorative */}
+      <div className="tactical-crosshair" style={{ top: '45%', left: '50%', width: '80px', height: '80px', transform: 'translate(-50%, -50%)' }}>
+        <div className="ring" />
+      </div>
+
+      {/* Operational badge */}
+      <div className="absolute top-4 right-4 z-20">
+        <span className="operational-badge">
+          <span className="relative flex items-center justify-center">
+            <span className="dot" />
+            <span className="pulse" />
+          </span>
+          Operacional
+        </span>
+      </div>
 
       {loadState !== 'loading' && (
         <>
@@ -161,14 +177,15 @@ export default function HeroBanner({ history, onNavigate }: HeroBannerProps) {
       )}
 
       {/* Content — only shown in non-preview mode */}
-      <div className={`relative z-10 ${RESPONSIVE_HEIGHTS} flex flex-col`}>
+      <div className={`relative z-10 ${RESPONSIVE_HEIGHTS} flex flex-col scanlines`}>
         <div className="flex-1 px-6 md:px-12 pt-14 pb-4 flex flex-col justify-start">
           <div className="max-w-3xl space-y-4">
             <motion.span
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="inline-flex items-center gap-2 px-3 py-1 text-[10px] uppercase font-bold font-mono tracking-[0.35em] bg-red-600/90 text-white rounded-full shadow-lg shadow-red-950/20 w-fit"
+              className="inline-flex items-center gap-2 px-3 py-1 text-[10px] uppercase font-bold font-mono tracking-[0.35em] bg-red-600/90 text-white rounded-full shadow-lg shadow-red-950/20 w-fit tactical-glitch"
+              data-text="UNIDADE TÁTICA DE PRONTO EMPREGO"
             >
               UNIDADE TÁTICA DE PRONTO EMPREGO
             </motion.span>
