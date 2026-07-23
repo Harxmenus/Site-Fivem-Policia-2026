@@ -169,7 +169,7 @@ export default function SelectionProcess({ questions }: SelectionProcessProps) {
             </span>
           </div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Shield className="text-red-500 w-7 h-7" /> Processo Seletivo GTO
+            <Shield className="text-red-500 w-7 h-7" /> Processo Seletivo PMSP
           </h2>
           <p className="text-slate-400 text-sm mt-1">
             Ficha de Inscrição e Teste Tático de Conhecimento Doutrinário
@@ -194,7 +194,7 @@ export default function SelectionProcess({ questions }: SelectionProcessProps) {
                   Aviso importante para Candidatos:
                 </span>{' '}
                 Este processo seletivo avalia sua capacidade analítica, estabilidade psicológica e
-                domínio básico das doutrinas táticas do GTO. É obrigatório acertar pelo menos{' '}
+                domínio básico das doutrinas táticas da PMSP. É obrigatório acertar pelo menos{' '}
                 <strong className="text-white">11 de 15 questões (70%)</strong> para ser
                 pré-aprovado. Candidatos pré-aprovados serão convocados via Discord para a fase
                 prática e Teste de Aptidão Física (TAF).
@@ -387,7 +387,7 @@ export default function SelectionProcess({ questions }: SelectionProcessProps) {
             </h3>
             <p className="text-slate-400 text-sm max-w-md text-center">
               Avaliando sua pontuação, registrando sua ficha no banco tático e estabelecendo
-              transmissão para o canal do Discord do GTO...
+              transmissão para o canal do Discord da PMSP...
             </p>
           </motion.div>
         )}
@@ -486,7 +486,7 @@ export default function SelectionProcess({ questions }: SelectionProcessProps) {
                     <strong className="text-white block mb-1">Próximos passos:</strong>
                     Sua ficha está ativa. Fique atento às suas mensagens privadas no{' '}
                     <span className="underline font-bold">Discord</span> fornecido (
-                    {formData.discordTag}). O comando do GTO entrará em contato para agendar o exame
+                    {formData.discordTag}). O comando da PMSP entrará em contato para agendar o exame
                     médico e o teste físico (corrida, barra fixa, flexão e natação). Mantenha o
                     treinamento ativo!
                   </div>
@@ -496,7 +496,7 @@ export default function SelectionProcess({ questions }: SelectionProcessProps) {
                   <HelpCircle className="text-red-400 shrink-0 mt-0.5" />
                   <div>
                     <strong className="text-white block mb-1">Orientação de estudo:</strong>
-                    Para ingressar no GTO é necessário espírito de corpo impecável, conhecimento
+                    Para ingressar na PMSP é necessário espírito de corpo impecável, conhecimento
                     analítico minucioso do procedimento operacional padrão e resiliência
                     psicológica. Estude as explicações técnicas listadas abaixo, reforce seu
                     conhecimento e tente novamente quando se sentir preparado.
@@ -567,7 +567,7 @@ export default function SelectionProcess({ questions }: SelectionProcessProps) {
                       {/* Explanation */}
                       <div className="p-3 bg-slate-900/40 rounded-lg text-xs text-slate-400 border-l-2 border-red-500/60 leading-relaxed">
                         <span className="font-semibold text-slate-300 block mb-1">
-                          Fundamentação Técnica GTO:
+                          Fundamentação Técnica PMSP:
                         </span>
                         {q.explanation}
                       </div>

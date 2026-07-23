@@ -117,7 +117,7 @@ const DEFAULT_QUESTIONS = [
   {
     id: 'q2',
     question:
-      'Ao deparar-se com uma barricada hostil durante um patrulhamento urbano, qual deve ser a primeira conduta da equipe do GTO?',
+      'Ao deparar-se com uma barricada hostil durante um patrulhamento urbano, qual deve ser a primeira conduta da equipe da PMSP?',
     options: [
       'Avançar individualmente a pé',
       'Buscar abrigo imediato, reportar a situação para estabelecer o perímetro e aguardar ordens',
@@ -131,7 +131,7 @@ const DEFAULT_QUESTIONS = [
   {
     id: 'q3',
     question:
-      'Qual é o principal valor institucional esperado de um operador do Grupo Tático de Operações?',
+      'Qual é o principal valor institucional esperado de um operador da PMSP?',
     options: [
       'Individualismo absoluto nas tomadas de decisão',
       'Lealdade, disciplina rigorosa e espírito de corpo',
@@ -158,7 +158,7 @@ const DEFAULT_QUESTIONS = [
   {
     id: 'q5',
     question:
-      'Durante uma negociação tática com reféns, qual o papel primário do negociador do GTO?',
+      'Durante uma negociação tática com reféns, qual o papel primário do negociador da PMSP?',
     options: [
       'Ganhar tempo útil, acalmar o tomador de reféns e colher inteligência tática',
       'Invadir o local imediatamente sem qualquer autorização superior',
@@ -186,7 +186,7 @@ const DEFAULT_QUESTIONS = [
   {
     id: 'q7',
     question:
-      'Qual equipamento é considerado essencial para proteção balística individual de um operador do GTO?',
+      'Qual equipamento é considerado essencial para proteção balística individual de um operador da PMSP?',
     options: [
       'Colete balístico com placas cerâmicas rígidas nível III ou IV e capacete balístico',
       'Apenas óculos escuros de sol de alta performance',
@@ -212,7 +212,7 @@ const DEFAULT_QUESTIONS = [
   },
   {
     id: 'q9',
-    question: "Qual conduta exemplifica corretamente o conceito de 'espírito de corpo' no GTO?",
+    question: "Qual conduta exemplifica corretamente o conceito de 'espírito de corpo' na PMSP?",
     options: [
       'Disputar privilégios internos de forma individualista',
       'Solidariedade mútua, coesão grupal e apoio tático incondicional dentro da legalidade',
@@ -254,7 +254,7 @@ const DEFAULT_QUESTIONS = [
   {
     id: 'q12',
     question:
-      'Qual característica psicológica é indispensável para um operador do GTO sob estresse severo?',
+      'Qual característica psicológica é indispensável para um operador da PMSP sob estresse severo?',
     options: [
       'Pânico descontrolado e reação de fuga imediata',
       'Equilíbrio emocional, raciocínio lógico analítico e foco estrito na segurança da equipe',
@@ -281,7 +281,7 @@ const DEFAULT_QUESTIONS = [
   {
     id: 'q14',
     question:
-      'Qual o protocolo recomendado de comunicação via rádio em operações especiais do GTO?',
+      'Qual o protocolo recomendado de comunicação via rádio em operações especiais da PMSP?',
     options: [
       'Conversas descontraídas, extensas e repletas de detalhes pessoais',
       'Mensagens objetivas, linguagem clara padronizada e transmissões estritamente necessárias',
@@ -836,19 +836,19 @@ app.post('/api/submit-test', async (req, res) => {
       ];
 
       const discordPayload = {
-        username: 'Portal GTO - Recrutamento',
+        username: 'Portal PMSP - Recrutamento',
         avatar_url:
           'https://images.unsplash.com/photo-1508847154043-be12a327dc6f?q=80&w=200&auto=format&fit=crop',
         embeds: [
           {
             title: '⚡ Nova Ficha de Inscrição Recebida',
             description:
-              'Um candidato realizou o teste tático do GTO pelo portal oficial. Veja os detalhes abaixo:',
+              'Um candidato realizou o teste tático da PMSP pelo portal oficial. Veja os detalhes abaixo:',
             color: passed ? 3066993 : 15158332, // Green or Red
             fields: embedFields,
             timestamp: new Date().toISOString(),
             footer: {
-              text: 'Portal GTO Oficial • Sistema de Triagem Automática',
+              text: 'Portal PMSP Oficial • Sistema de Triagem Automática',
             },
           },
         ],
